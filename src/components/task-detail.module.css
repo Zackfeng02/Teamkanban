@@ -2,6 +2,7 @@
 
 .uploadZone{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 18px;margin:16px;border:2px dashed #bdcfbb;border-radius:10px;background:#fbfdf9;text-align:center;color:#52674d}.uploadZone strong{font-size:14px}.uploadZone small{font-size:11px;line-height:1.6}.uploadZone label{position:relative;cursor:pointer;overflow:hidden}.uploadZone input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}.uploadZone label:focus-within{outline:2px solid #648c6f;outline-offset:3px}.uploadZone p{font-size:12px;overflow-wrap:anywhere;max-width:100%;margin:0}.uploadError{color:#a33731}.messageMeta button{margin-left:auto;flex-shrink:0}.messageMeta strong{overflow-wrap:anywhere;min-width:0}
 
+
 /* Constrain native form controls, including iOS date inputs, to their grid cell. */
 .formPanel :global(.sheet-body) { min-height: 0; }
 .formPanel :global(.field-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

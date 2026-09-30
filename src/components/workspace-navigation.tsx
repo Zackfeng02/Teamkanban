@@ -1,18 +1,17 @@
 'use client';
-import { CheckCheck, Kanban, Inbox, Scale, LogOut, UsersRound } from 'lucide-react';
+import { CheckCheck, Kanban, Scale, LogOut, UsersRound } from 'lucide-react';
 import { workspacePages, type NavigationPage, type LocalNavigationPage } from '../lib/workspace-pages.ts';
 import styles from './workspace-shell.module.css';
 export type { NavigationPage } from '../lib/workspace-pages.ts';
 export type NavigationData = { team: { name: string }; members: { active: boolean }[]; me: { id?: string; name: string; role: string }; sources?: { sender: string; taskIds: string[] }[] };
-export type WorkspaceNavigationProps = { page: NavigationPage; data: NavigationData | null; inbox?: number; onNavigate?: (page: LocalNavigationPage) => void; onLogout: () => void };
-const icons = { board: Kanban, inbox: Inbox, team: UsersRound, insurance: Scale };
-export default function WorkspaceNavigation({ page, data, inbox, onNavigate, onLogout }: WorkspaceNavigationProps) {
-  const inboxCount = inbox ?? data?.sources?.filter(source => source.sender === data.me.id && !source.taskIds.length).length ?? 0;
+export type WorkspaceNavigationProps = { page: NavigationPage; data: NavigationData | null; onNavigate?: (page: LocalNavigationPage) => void; onLogout: () => void };
+const icons = { board: Kanban, team: UsersRound, insurance: Scale };
+export default function WorkspaceNavigation({ page, data, onNavigate, onLogout }: WorkspaceNavigationProps) {
   const links = workspacePages.map(({ id, kind, href, label, shortLabel, icon }) => {
     const Icon = icons[icon];
     return <a key={id} href={href} className={styles.navLink} aria-current={page === id ? 'page' : undefined} onClick={e => {
       if (onNavigate && kind === 'local' && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); onNavigate(id); }
-    }}><span className={styles.navIcon}><Icon aria-hidden="true"/>{id === 'inbox' && inboxCount > 0 && <b aria-label={`${inboxCount} 份待整理资料`}>{inboxCount > 99 ? '99+' : inboxCount}</b>}</span><span className={styles.longLabel}>{label}</span><span className={styles.shortLabel}>{shortLabel}</span></a>;
+    }}><span className={styles.navIcon}><Icon aria-hidden="true"/></span><span className={styles.longLabel}>{label}</span><span className={styles.shortLabel}>{shortLabel}</span></a>;
   });
   return <aside className={styles.navigation} aria-label="工作空间导航面板" data-workspace-navigation>
     <a href="/" className={styles.brand}><span><CheckCheck aria-hidden="true"/></span>Team Kanban</a>

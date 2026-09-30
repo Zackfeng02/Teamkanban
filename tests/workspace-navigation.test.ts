@@ -34,6 +34,10 @@ test('page styling is outside the navigation subtree and does not change its mar
   assert.ok(insurance.indexOf('</aside>') < insurance.indexOf('class="ir"'));
   assert.equal((insurance.match(/data-workspace-content=/g) || []).length, 1);
 });
-test('inbox badge uses only the current member unassigned sources on all pages', () => {
-  for (const page of workspacePages) assert.ok(render(page.id).includes('aria-label="1 份待整理资料"'));
+test('materials are accessed through task creation instead of a separate workspace page', () => {
+  for (const page of workspacePages) {
+    const html = render(page.id);
+    assert.ok(!html.includes('href="/?page=inbox"'));
+    assert.ok(!html.includes('资料收件箱'));
+  }
 });

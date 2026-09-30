@@ -1,6 +1,6 @@
 # 同程 · 团队 Kanban
 
-一个可运行的 Next.js / React / TypeScript 团队事务应用。当前接入路线是**企业微信智能机器人单聊 → 逐条转发文字和图片 → 资料收件箱 → AI 草稿 → 人工确认 → 团队看板**。
+一个可运行的 Next.js / React / TypeScript 团队事务应用。当前接入路线是**企业微信智能机器人单聊 → 逐条转发聊天、图片和 PDF → 在新建任务中选资料 → DeepSeek 辅助填表 → 人工核对 → 团队看板**。
 
 合并转发卡片及嵌套记录尚未打通。界面不会把引用摘要标记成完整资料，也没有用截图上传替代这一限制。此前的会话存档检查器保留为独立诊断工具，不是当前机器人路线的实现。
 
@@ -56,7 +56,7 @@ DATABASE_URL=postgresql://postgres.<project-ref>:[PASSWORD]@aws-0-<region>.poole
 
 ## DeepSeek V4.1 Flash
 
-已实现 OpenAI 兼容的服务端适配层、严格 JSON 校验、持久化整理队列和失败重试。根据 DeepSeek 2026-09-10 的官方公告，V4.1 Flash 的 API 型号为 `deepseek-flash`。本机配置使用该型号，仍会先通过 `/models` 验证再处理任何资料。AI 只接收成员选中的聊天文字；转发图片始终作为私有任务附件保存，代码没有图片识别或图片上传到 AI 的路径。
+已实现 OpenAI 兼容的服务端适配层、严格 JSON 校验、持久化整理队列和失败重试。根据 DeepSeek 2026-09-10 的官方公告，V4.1 Flash 的 API 型号为 `deepseek-flash`。本机配置使用该型号，仍会先通过 `/models` 验证再处理任何资料。AI 只接收成员显式选中的文字及本机 OCR 提取结果；原图和 PDF 作为私有任务附件保存。新建表单使用同步逐字段识别，历史整理草稿仍由队列处理。
 
 在 `.env.local` 设置：
 
@@ -73,25 +73,32 @@ npm run ai:verify
 npm run ai:verify -- --sample
 ```
 
-第一条只核验模型列表，第二条才发送一份内置的虚构文字测试资料。图片不会发送给 DeepSeek；只选图片时可“新建并附加”任务，不能要求 AI 从图片推断任务或客户。AI 结果仅为私人草稿，负责人必须由成员选择，日期和行动项在确认时核对。聊天资料作为不可信输入，不提供工具执行权限。
+第一条只核验模型列表，第二条才发送一份内置的虚构文字测试资料。图片及 PDF 原文件不会发送给 DeepSeek，其可读文字／OCR 结果用于辅助填表；没有识别出文字的附件请手工补充。所有结果在创建任务前人工核对，负责人由成员选择。聊天资料作为不可信输入，不提供工具执行权限。
 
 ## ClientCore 客户确认
 
-AI 可从文字中提取客户名称或编号作为建议，但绝不自动绑定。成员在任务草稿、新建任务或任务详情中点击“在 ClientCore 中查找并确认”，从候选中明确选择后，任务才保存 `clientCoreId`、客户编号和显示名快照。名称只用于候选；图片、手机号和邮箱都不参与匹配。
+AI 可从文字中提取客户名称或编号作为建议，但绝不自动绑定。已有客户任务先查找并明确确认 BMS 候选；新客报价无需查询 BMS，保持未关联。任务详情仍可手动查找并建立关联。只有明确确认过的候选才保存 `clientCoreId`、客户编号和显示名快照。名称只用于候选；图片、手机号和邮箱都不参与匹配。
 
-Team Kanban 只调用 ClientCore 的受限服务端接口，浏览器不会接触 ClientCore 登录令牌。在两个应用的本地配置中设置同一个随机密钥，并把 ClientCore 配置为对应组织：
+Team Kanban 调用新版 ClientCoreBMS 的受限服务端接口，浏览器不会接触连接密钥或 ClientCore 登录令牌。在两个应用中配置同一个专用随机密钥（至少 32 个字符），并在 ClientCoreBMS 指定启用的成员及授权的 Kanban 团队：
 
 ```dotenv
 # Team Kanban .env.local
-CLIENTCORE_KANBAN_API_BASE_URL=http://127.0.0.1:5174/api/integrations/team-kanban/
-CLIENTCORE_KANBAN_API_KEY=同一个随机密钥
+CLIENTCORE_KANBAN_API_BASE_URL=http://127.0.0.1:5190/api/integrations/team-kanban/v1/
+CLIENTCORE_KANBAN_API_KEY=同一个专用随机密钥
 
-# ClientCore .env
-CLIENTCORE_TEAM_KANBAN_API_KEY=同一个随机密钥
-CLIENTCORE_TEAM_KANBAN_ORGANIZATION_ID=ClientCore 组织 ID
+# ClientCoreBMS 服务端环境（该应用不会自动加载 .env）
+BMS_KANBAN_SECRET=同一个专用随机密钥
+BMS_KANBAN_MEMBER_ID=已启用的 ClientCoreBMS 成员 ID
+BMS_KANBAN_TEAM_ID=授权的 Kanban 团队 ID
 ```
 
-接口最多返回 10 条 `{id, clientCode, displayName, matchTypes}`，不会返回电话、邮箱、备注、附件或完整客户档案。成员选中后 Team Kanban 会以 ID 再回查一次，再保存关联；ClientCore 未配置时仍可创建未关联任务。
+接口最多返回 10 条 `{id, clientCode, displayName, matchTypes}`，不会返回电话、邮箱、备注、附件或完整客户档案。成员选中后 Team Kanban 会以 ID 再回查一次，再保存关联；ClientCore 未配置时仍可创建未关联的新客报价；已有客户任务须先恢复连接。
+
+新版 v1 接口还提供保单年度、资产、变更前信息及确认回执。客户查询可使用 Viewer；确认业务写入需要 ClientCoreBMS Owner，并由 Kanban 管理员明确提交。普通建卡、编辑草稿和拖动看板不会写入客户业务事实。已有旧版客户关联必须先核对 ID 映射，不能仅切换地址后沿用旧 ID。
+
+本云端环境运行独立的虚构联调数据，未迁移已有真实客户。保险方案对比使用独立的共享存储；本地可通过 `LOCAL_PREVIEW=true` 和 `LOCAL_INSURANCE_DATABASE_URL` 指向 loopback PostgreSQL，保持团队 RLS 隔离。AI 与企业微信仍各自需要配置，连接 ClientCoreBMS 不会自动启用它们。
+
+资料收件箱已并入新建任务表单的右侧，按任务种类区分新客和已有客户的流程；旧 `/?page=inbox` 链接打开统一新建窗口。旧版待处理草稿保留在历史草稿区。
 
 体验演示空间不会调用 ClientCore 客户查询。请登录真实团队账号后再进行客户确认，避免演示账号接触实际客户候选。
 
@@ -101,7 +108,7 @@ CLIENTCORE_TEAM_KANBAN_ORGANIZATION_ID=ClientCore 组织 ID
 
 - 邀请制账号和密码登录、成员管理、一次性绑定码；移除成员使已有会话立即失效。
 - 管理员密码恢复：在网页点击“忘记密码”，使用本机 `npm run recover-password -- --team <团队编号> --name <管理员显示名>`（或 `--login <管理员账号>`）生成 10 分钟、一次性恢复码；恢复成功会让该管理员的旧会话失效。恢复码只在命令行显示，不通过机器人或前端返回。
-- 私人收件箱、逐项资料选择、显式追加任务、AI 拆分任务草稿和人工确认。
+- 新建表单内的私人收件箱、逐项资料选择、带原文依据的 AI 填表和人工核对。
 - 四列看板、负责人/类型/日期筛选、标题/客户搜索、手机状态标签。
 - 负责人、截止日期、等待原因、行动清单、评论、操作人与前后值记录。
 - 任务版本校验、10 秒可见页同步、管理员归档/恢复。
@@ -177,3 +184,15 @@ docker compose stop web
 当前 LOCAL_PREVIEW / DEMO_MODE 配置保持原样；容器化未改变部署模式。
 
 已有界面修改包含在镜像中；以后改动源码后需重新构建镜像。
+
+## 统一任务创建
+
+看板只提供“新建保单变更任务”和“新建任务”两个创建入口。资料收件箱位于表单右侧：
+
+- 新客报价没有 BMS 档案，直接选择资料，提取客户姓名、联系方式及车险／房屋险报价字段。任务保持未关联 BMS 客户，不自动建档。
+- 已有客户的一般任务先查找并明确确认 BMS 姓名、编号和 ID，再显示资料收件箱。保存时重新向 BMS 校验客户。
+- 保单变更先确认客户并读取、锁定旧信息，再提取拟变更字段；保存仍检查旧信息版本。
+
+资料须由当前成员手动选择，单次最多 30 份。AI 仅填空白项；每项识别值须有原文引用。修改字段或资料选择后须重新核对。已填写内容不会被 AI 覆盖。报价表单、引用和原始附件随任务持久保存；详情中可查看创建时的完整表单。历史 AI 草稿保留在新建窗口的历史草稿区；不再提供新的“资料拆分任务”入口。外部 CanTrust 表单的原有接收接口保留。
+
+TXT、文字 PDF、图片及扫描 PDF 支持提取；每个上传文件最多 12 MB，PDF 最多 25 页，其中最多识别 5 个扫描页。Linux 需要 Tesseract 及中文／英文语言包，使用 `OCR_COMMAND`、`OCR_LANGUAGES`、`OCR_TESSDATA_DIR` 配置。OCR 文字由本机生成，原图与 PDF 保留。点击识别后，仅所选资料的文字及 OCR 结果发送给配置的 DeepSeek 服务。缺少 AI 密钥或 OCR 无法识别时，可手动填写，不会伪造识别结果。
