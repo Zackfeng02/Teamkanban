@@ -96,9 +96,12 @@ export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
   if (task.version !== version) throw new Problem(409, '其他成员已更新此任务。请查看最新内容后再保存');
   if (base.op.startsWith('workflow.')) { const before=structuredClone(task.workflow??null); applyWorkflowAction(task,actor,base); event(task,actor,'更新办理节点',before,task.workflow); return {}; }
   if (base.op === 'updateTask') {
-    if(task.workflow?.pendingConfirmation) throw new Problem(409,'请先核实待处理的业务提交，再修改任务');
+    if(task.workflow?.pendingConfirmation||task.renewal?.pending) throw new Problem(409,'请先核实待处理的业务提交，再修改任务');
     const { patch } = z.object({ patch: draftSchema.omit({ checklist: true }).extend({ status: z.enum(['todo','doing','waiting','done']), waitingReason: z.string().max(1000), checklist: z.array(z.object({ id: z.string().max(100), text: z.string().trim().min(1).max(500), done: z.boolean() })).max(40) }).strict() }).parse(base);
     if(task.changeForm&&(patch.type!==task.type||patch.customerRef?.clientCoreId!==task.customerRef?.clientCoreId))throw new Problem(409,'变更表单已锁定客户和类型，请另建任务');
+    if(task.renewal&&(patch.type!==task.type||patch.customerRef?.clientCoreId!==task.customerRef?.clientCoreId))throw new Problem(409,'续保任务已绑定客户和原保单年度');
+    if(task.billingFollowup&&(patch.type!==task.type||patch.customerRef?.clientCoreId!==task.customerRef?.clientCoreId||patch.status==='done'&&task.status!=='done'))throw new Problem(409,'请在账务跟进页面更新实际金额并完成任务');
+    if(task.renewal&&patch.status==='done'&&task.status!=='done')throw new Problem(400,'请在续保页面核实并完成任务');
     if (patch.status === 'waiting' && !patch.waitingReason.trim()) throw new Problem(400, '请填写等待外部的原因'); validOwner(team, patch.ownerId);
     if (new Set(patch.checklist.map(c => c.id)).size !== patch.checklist.length) throw new Problem(400, '检查项重复');
     if (task.workflow && (task.workflow.pendingConfirmation || task.workflow.receipts.length || task.workflow.steps.some(s=>s.evidence)) && (patch.type!==task.type || patch.customerRef?.clientCoreId!==task.customerRef?.clientCoreId)) throw new Problem(409,'已有业务确认，不能更换任务类型或客户');
@@ -107,7 +110,7 @@ export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
     const before = Object.fromEntries(Object.keys(patch).map(key => [key, (task as any)[key]])); Object.assign(task, patch); event(task, actor, '更新任务', before, patch); return {};
   }
   if (base.op === 'comment') { const { text } = z.object({ text: z.string().trim().min(1).max(4000) }).parse(base); task.comments.push({ id: randomUUID(), memberId: actor.memberId, at: now(), text }); event(task, actor, '添加进展', null, text); return {}; }
-  if (base.op === 'archive') { requireMember(team, actor, true); const { archived } = z.object({ archived: z.boolean() }).parse(base); const before = task.archived; task.archived = archived; event(task, actor, archived ? '归档任务' : '恢复任务', before, archived); return {}; }
+  if (base.op === 'archive') { requireMember(team, actor, true); const { archived } = z.object({ archived: z.boolean() }).parse(base); if(archived&&(task.renewal||task.billingFollowup)&&(task.status!=='done'||task.renewal?.pending||task.workflow&&!workflowComplete(task.workflow,task.type)))throw new Problem(400,'请先在续保或账务页面核实并完成业务节点'); const before = task.archived; task.archived = archived; event(task, actor, archived ? '归档任务' : '恢复任务', before, archived); return {}; }
   if (base.op === 'append') { const { sourceIds } = z.object({ sourceIds: idsSchema }).parse(base); const sources = ownSources(team, actor, sourceIds, true); const before = [...task.sourceIds]; task.sourceIds = [...new Set([...task.sourceIds, ...sourceIds])]; for (const source of sources) if (!source.taskIds.includes(task.id)) source.taskIds.push(task.id); event(task, actor, '追加资料', before, task.sourceIds); return {}; }
   throw new Problem(400, '未知操作');
 }

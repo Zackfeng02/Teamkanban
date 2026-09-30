@@ -28,7 +28,7 @@ export function authorizationInput(url: URL) {
 }
 async function records() {
   const db = await database();
-  await db.query('CREATE TABLE IF NOT EXISTS kanban_sso (hash text PRIMARY KEY, kind text NOT NULL, data jsonb NOT NULL, expires bigint NOT NULL)');
+  await db.query(process.env.DATABASE_URL ? 'SELECT hash FROM kanban_sso LIMIT 0' : 'CREATE TABLE IF NOT EXISTS kanban_sso (hash text PRIMARY KEY, kind text NOT NULL, data jsonb NOT NULL, expires bigint NOT NULL)');
   return db;
 }
 type Grant = { client?: string; teamId: string; memberId: string; session: string; challenge: string; redirect: string };

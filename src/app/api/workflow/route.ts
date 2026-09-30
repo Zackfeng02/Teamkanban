@@ -18,6 +18,7 @@ export async function POST(request:Request) {try {
  originCheck(request);
  const input=z.object({taskId:z.string(),version:z.number().int(),stepKey:z.string(),termId:z.string(),originalTermId:z.string().optional(),mode:z.enum(['verify','record','retry']),effectiveDate:z.string().optional(),premiumCents:z.number().int().nonnegative().optional(),source:z.string().trim().max(2000).optional(),wholePolicyCancellation:z.boolean().optional()}).strict().parse(await jsonBody(request));
  const {actor,team,task,clientId}=await context(input.taskId);requireMember(team,actor,true);
+ if(task.renewal||task.billingFollowup)throw new Problem(400,'请在续保或账务页面处理此任务');
  const flow=task.workflow,step=flow?.steps.find(s=>s.key===input.stepKey);
  if(!flow||!step?.gate)throw new Problem(400,'请选择业务确认节点');
  if(task.version!==input.version)throw new Problem(409,'任务已更新，请重新加载');

@@ -32,8 +32,16 @@ export async function clientCoreRequest(path: string, body?:unknown) {
   try { response = await fetch(url, { method, body:body===undefined?undefined:JSON.stringify(body), headers: { 'Content-Type':'application/json', 'X-Kanban-Timestamp': timestamp, 'X-Kanban-Signature': signature }, redirect: 'error', signal: AbortSignal.timeout(10000) }); }
   catch { throw new Problem(503, 'ClientCore 客户查询暂不可用'); }
   if (response.status === 401 || response.status === 403) throw new Problem(503, 'ClientCore 客户查询授权失败');
-  if (!response.ok) { const value=await response.json().catch(()=>({})); throw new Problem(response.status,typeof value.error==='string'?value.error:'ClientCore 请求未完成'); }
-  try { return JSON.parse((await boundedBody(response, 256000)).toString('utf8')); } catch { throw new Problem(503, 'ClientCore 客户查询返回无效'); }
+  if (!response.ok) { const value=await response.json().catch(()=>({})); throw new Problem(response.status,typeof value.message==='string'?value.message:typeof value.error==='string'?value.error:'ClientCore 请求未完成'); }
+  try { return JSON.parse((await boundedBody(response, 2_000_000)).toString('utf8')); } catch { throw new Problem(503, 'ClientCore 客户查询返回无效'); }
+}
+
+export async function clientCorePdf(path:string) {
+ const {base,key}=integrationConfig(),url=new URL(path,base),timestamp=String(Math.floor(Date.now()/1000));
+ const signature=createHmac('sha256',key).update(`${timestamp}\nGET\n${url.pathname}${url.search}`).digest('hex');
+ const response=await fetch(url,{headers:{'X-Kanban-Timestamp':timestamp,'X-Kanban-Signature':signature},redirect:'error',signal:AbortSignal.timeout(30000)});
+ if(!response.ok){const body=await response.json().catch(()=>({}));throw new Problem(response.status,body.message??'原件读取失败');}
+ return boundedBody(response,25*1024*1024);
 }
 
 export async function searchClientCoreCustomers(query: string): Promise<ClientCoreCustomer[]> {

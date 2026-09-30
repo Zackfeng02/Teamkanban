@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import pg from 'pg';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import type { Team } from './model.ts';
 
 type Query = (sql: string, params?: unknown[]) => Promise<{ rows: any[] }>;
@@ -18,7 +19,14 @@ async function createStore(): Promise<Store> {
   }
   let store: Store;
   if (process.env.DATABASE_URL) {
-    const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
+    const databaseUrl = new URL(process.env.DATABASE_URL);
+    const caPath = process.env.DATABASE_CA;
+    if (caPath && ['sslmode', 'sslcert', 'sslkey', 'sslrootcert'].some(key => databaseUrl.searchParams.has(key))) {
+      throw new Error('DATABASE_CA_CANNOT_BE_OVERRIDDEN_BY_URL');
+    }
+    const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 5,
+      ...(caPath ? { ssl: { ca: readFileSync(caPath, 'utf8'), rejectUnauthorized: true } } : {}),
+      connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 });
     store = { query: (sql, params) => pool.query(sql, params), transaction: async fn => {
       const client = await pool.connect();
       try { await client.query('BEGIN'); const value = await fn((sql, params) => client.query(sql, params)); await client.query('COMMIT'); return value; }
@@ -29,7 +37,7 @@ async function createStore(): Promise<Store> {
     const db = new PGlite(process.env.KANBAN_DATA_DIR || resolve('.data/postgres'));
     store = { query: (sql, params) => db.query(sql, params), transaction: fn => db.transaction(tx => fn((sql, params) => tx.query(sql, params))) };
   }
-  await store.query('CREATE TABLE IF NOT EXISTS kanban_teams (id text PRIMARY KEY, data jsonb NOT NULL)');
+  await store.query(process.env.DATABASE_URL ? 'SELECT id FROM kanban_teams LIMIT 0' : 'CREATE TABLE IF NOT EXISTS kanban_teams (id text PRIMARY KEY, data jsonb NOT NULL)');
   return store;
 }
 export async function database() { return globals.kanbanStore ??= createStore(); }

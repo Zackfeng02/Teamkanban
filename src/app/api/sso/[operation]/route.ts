@@ -16,7 +16,7 @@ export async function GET(request: Request, context: { params: Promise<{ operati
     catch (error) {
       if (!(error instanceof Problem) || error.status !== 401) throw error;
       // Return only to this fixed endpoint after the existing login succeeds.
-      return new NextResponse(null, { status: 303, headers: { ...headers, Location: '/?sso=' + encodeURIComponent('/api/sso/authorize' + url.search) } });
+      return new NextResponse(null, { status: 303, headers: { ...headers, Location: '/login?sso=' + encodeURIComponent('/api/sso/authorize' + url.search) } });
     }
   } catch (error) { const response = failure(error); Object.entries(headers).forEach(([k,v]) => response.headers.set(k,v)); return response; }
 }
