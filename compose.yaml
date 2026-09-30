@@ -1,0 +1,67 @@
+name: team-kanban
+x-common: &common
+  image: team-kanban-local
+  build: .
+  restart: unless-stopped
+  init: true
+  stop_grace_period: 180s
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.1
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ./config/cloudflared.yml:/etc/cloudflared/config.yml:ro
+      - ./.data/cloudflared/credentials.json:/etc/cloudflared/credentials.json:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  web:
+    <<: *common
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      KANBAN_DATA_DIR: /data/postgres
+      CLIENTCORE_KANBAN_API_BASE_URL: http://host.docker.internal:5174/api/integrations/team-kanban/
+      CLIENTCORE_ALLOW_DOCKER_HOST: "true"
+    volumes:
+      - ./.env.local:/app/.env.local:ro
+      - ./config:/app/config:ro
+      - ./.data/postgres-restored-20260911:/data/postgres
+      - ./.data/objects:/app/.data/objects
+    healthcheck:
+      test: ["CMD", "node", "--env-file=.env.local", "-e", "fetch('http://127.0.0.1:3000/api/worker',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+process.env.WORKER_TOKEN},body:JSON.stringify({op:'teams'})}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+  worker:
+    <<: *common
+    command: ["node", "--env-file=.env.local", "src/worker.ts"]
+    environment:
+      WORKER_INTERNAL_ORIGIN: http://web:3000
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      - ./.env.local:/app/.env.local:ro
+      - ./.data/spool:/app/.data/spool

@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env*
+!.env.example
+evidence/*
+!evidence/.gitkeep
+coverage/
+*.log
+.data/
+*.tsbuildinfo
+next-env.d.ts
+
+# Machine-specific tunnel configuration and local backups.
+config/cloudflared.yml*
+*.bak
+*.key
+*.pem

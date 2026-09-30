@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "evidenceMode": "pending",
+  "organizationReviewer": "",
+  "adminChecks": {
+    "productAndApi": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "organizationEligibility": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "recipientAccount": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "captureScope": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "authorizationRequirements": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "processingRegions": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "mediaAccess": {
+      "confirmed": false,
+      "notes": ""
+    },
+    "pricingAndSeats": {
+      "confirmed": false,
+      "notes": ""
+    }
+  },
+  "cases": [
+    {
+      "id": "ios-wechat-merged",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "ios-wechat-image",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "ios-wecom-merged",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "ios-wecom-image",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "android-wechat-merged",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "android-wechat-image",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "android-wecom-merged",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    },
+    {
+      "id": "android-wecom-image",
+      "tester": "",
+      "testedAt": "",
+      "clientVersion": "",
+      "steps": "",
+      "sample": "",
+      "media": "",
+      "sampleSha256": "",
+      "expectedTextCount": null,
+      "expectedImageCount": null,
+      "forwardedWithoutUpload": false,
+      "sourceContentCompared": false,
+      "imagesOpenedAndCompared": false,
+      "sourceOrderCompared": false,
+      "imageSha256": []
+    }
+  ]
+}

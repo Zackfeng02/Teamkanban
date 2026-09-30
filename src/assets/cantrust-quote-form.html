@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CanTrust Canada — 保险报价 / Insurance Quote</title>
+  <style>
+    /* === CUSTOM PROPERTIES === */
+    :root {
+      --navy: #003366;
+      --navy-hover: #002244;
+      --accent: #0066cc;
+      --bg: #ffffff;
+      --card-bg: #f0f4f8;
+      --border: #d0d8e4;
+      --error: #cc0000;
+      --success: #006633;
+      --text: #1a1a2e;
+      --muted: #6b7c93;
+      --radius: 8px;
+      --shadow: 0 2px 12px rgba(0,51,102,0.10);
+    }
+
+    /* === RESET === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                   'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--card-bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* === HEADER === */
+    #header {
+      background: var(--navy);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #logo { height: 40px; width: auto; }
+    #logo-text {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    #lang-toggle {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.5);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    #lang-toggle:hover { background: rgba(255,255,255,0.15); }
+
+    /* === MAIN CONTAINER === */
+    #app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    /* === CARD === */
+    .card {
+      background: var(--bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+    }
+    @media (max-width: 400px) { .card { padding: 20px 16px; } }
+
+    /* === PROGRESS BAR === */
+    #progress-wrap { margin-bottom: 20px; }
+    #progress-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    #progress-bar-track {
+      display: flex;
+      gap: 4px;
+    }
+    .progress-seg {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+    .progress-seg.done { background: var(--navy); }
+    .progress-seg.active { background: var(--accent); }
+
+    /* === STEP CONTENT === */
+    #step-content { margin-bottom: 24px; }
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+    }
+
+    /* === FORM FIELDS === */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .field label .opt {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 44px;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7c93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,102,204,0.12);
+    }
+    .field input.error, .field select.error { border-color: var(--error); }
+    .field-error {
+      color: var(--error);
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    .field-error.visible { display: block; }
+
+    /* === RADIO GROUP === */
+    .radio-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 400;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 10px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      min-height: 44px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .radio-group input[type=radio] { display: none; }
+    .radio-group label.selected {
+      border-color: var(--navy);
+      background: #e8f0fb;
+      font-weight: 600;
+    }
+
+    /* === AREA UNIT TOGGLE === */
+    .area-wrap { display: flex; gap: 10px; align-items: flex-start; }
+    .area-wrap > .field-inner { flex: 1; }
+    .area-wrap input { width: 100%; }
+    .unit-toggle {
+      display: flex;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      flex-shrink: 0;
+      margin-top: 0;
+      height: 44px;
+    }
+    .unit-btn {
+      padding: 0 14px;
+      height: 44px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .unit-btn.active { background: var(--navy); color: #fff; font-weight: 600; }
+
+    /* === HINT TEXT === */
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+    /* === NAVIGATION BUTTONS === */
+    #nav-buttons { display: flex; gap: 12px; }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      min-height: 48px;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-primary { background: var(--navy); color: #fff; }
+    .btn-primary:hover { background: var(--navy-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--navy);
+      border: 1.5px solid var(--navy);
+      flex: 0 0 auto;
+      padding: 14px 20px;
+    }
+    .btn-secondary:hover { background: #e8f0fb; }
+
+    /* === QUOTE TYPE CARDS (Step 0) === */
+    .step0-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .step0-sub { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+    .type-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 22px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: border-color 0.2s, background 0.2s, transform 0.1s;
+      min-height: 72px;
+      margin-bottom: 12px;
+    }
+    .type-btn:last-child { margin-bottom: 0; }
+    .type-btn:hover { border-color: var(--navy); background: #e8f0fb; transform: translateY(-1px); }
+    .type-btn .icon { font-size: 28px; flex-shrink: 0; }
+    .type-btn .label-zh { font-size: 17px; font-weight: 700; color: var(--navy); }
+    .type-btn .label-en { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* === TRANSITION CARD === */
+    .transition-card { text-align: center; padding: 20px 0 8px; }
+    .transition-card .check { font-size: 48px; margin-bottom: 14px; }
+    .transition-card h3 { font-size: 18px; font-weight: 700; color: var(--success); margin-bottom: 8px; }
+    .transition-card p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+    /* === SUCCESS CARD === */
+    #success-card {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    #success-card .check { font-size: 56px; margin-bottom: 16px; }
+    #success-card h2 { font-size: 22px; font-weight: 700; color: var(--success); margin-bottom: 10px; }
+    #success-card p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+    /* === ERROR BANNER === */
+    #submit-error {
+      display: none;
+      background: #fff0f0;
+      border: 1px solid #ffcccc;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: var(--error);
+      line-height: 1.5;
+    }
+    #submit-error.visible { display: block; }
+
+    /* === SYSTEMS OPTIONAL HEADER === */
+    .systems-note {
+      background: #f8fafc;
+      border-left: 3px solid var(--accent);
+      padding: 10px 14px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div style="padding:12px;text-align:center;background:#eef3ee;color:#294f42">团队代填报价资料 · 提交后建立新报价任务 · <a href="/">返回看板</a></div>
+  <div id="header">
+    <div id="logo-wrap">
+      <img id="logo" src="" alt="CanTrust Canada" style="display:none">
+      <span id="logo-text">CanTrust Canada</span>
+    </div>
+    <button id="lang-toggle" onclick="toggleLang()">EN</button>
+  </div>
+  <div id="app">
+    <div id="wizard" class="card">
+      <input type="text" id="hp_website" name="website" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div id="progress-wrap" style="display:none">
+        <div id="progress-label">
+          <span id="progress-text"></span>
+          <span id="progress-step-label"></span>
+        </div>
+        <div id="progress-bar-track"></div>
+      </div>
+      <div id="submit-error"></div>
+      <div id="turnstile-container" style="margin:12px 0"></div>
+      <div id="step-content"></div>
+      <div id="nav-buttons"></div>
+      <div class="hint" id="hint-text"></div>
+    </div>
+    <div id="success-card" class="card">
+      <div class="check">✅</div>
+      <h2 id="success-title"></h2>
+      <p id="success-body"></p>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  // CONSTANTS
+  // ============================================================
+  const WEB3FORMS_KEY = '';
+  // ClientCore intake relay (Cloudflare Worker). Leave empty until the relay is deployed;
+  // while empty the form keeps submitting to Web3Forms only. See integrations/intake-relay
+  // in the ClientCore repo for deployment steps.
+  const RELAY_URL = '';
+  const RELAY_ACCESS_KEY = '';
+  // Cloudflare Turnstile sitekey. Leave empty to skip human verification; fill
+  // it together with the worker's TURNSTILE_SECRET_KEY to stop bot submissions.
+  const TURNSTILE_SITE_KEY = '';
+  let turnstileWidgetId = null;
+
+  function initTurnstile() {
+    if (!TURNSTILE_SITE_KEY || document.getElementById('cf-turnstile-api')) return;
+    const script = document.createElement('script');
+    script.id = 'cf-turnstile-api';
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = function() {
+      const container = document.getElementById('turnstile-container');
+      if (container && turnstileWidgetId === null && typeof turnstile !== 'undefined') {
+        turnstileWidgetId = turnstile.render(container, { sitekey: TURNSTILE_SITE_KEY });
+      }
+    };
+    document.head.appendChild(script);
+  }
+  const LOGO_B64 = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wgARCABkAGQDASIAAhEBAxEB/8QAGwABAAMBAQEBAAAAAAAAAAAAAAMFBgQHAQL/xAAaAQACAwEBAAAAAAAAAAAAAAAAAwECBAUG/9oADAMBAAIQAxAAAAH1QAAOfN0DqabS+ca/I+4QTsWEgAOQjri80qdK9RgfSvNNS9lZVt/57q6n9Zn45GoU1y1YXgVhHkPJ0c/ZyTT8WkXe56efh4HSsXxk0aS4z+g6GEG0AKvyb22vdTyGy0kFG4eSaLqYtFt/OfWuXrlFAAAACootpV5nZSn3l3pXXWIUAkAAIoOukrM/3hkieiWs/ElpNW3cEgvUAAFEXjlgHVcheOvWme30LsAf/8QAJRAAAgIBAwQCAwEAAAAAAAAAAwQBAgUAEyAQERIUBjAhMTQj/9oACAEBAAEFAuJzVXDhnbMj+p7M2x72azA3RYy8jXvkhxAbWuLnuU3PlIeiH8la+dvxSv74t7nrB+St00bJnK9kTUyeE0h/IjXyYca3ZE/cQ0zlYJwbFsN6GYote1a2la1Atu3647x2ur6pGwsAKsXolj4iDmqCibsN9VEe/F/HhyAnUjIFXSK1Bcg2vJS3NeRf5pP+xpJSKxyeAJhalO8HVE5rwstMxdUiuNnJyOm2Pm2pYup0wsE9EceYrSSIUB/S0r3ooj4/SW+2OLkrWG7SH2bXi7JKaqxaawxfzDctr8ZjvDMjXsy0JYJHFxOXyAIEwxQZbNLe7FIrPLKU8R0So4QKQzUBjgM0gViGvjwyGP11/8QAIREAAgICAgIDAQAAAAAAAAAAAQIAEQMQEiATIQQiMUH/2gAIAQMBAT8B0XE8ZIBHXyCP+xDWMTwmrjLXrZiKWNCB1WkOslXtk5Q/HKr9T70mVuNHrjyfwzMqk+uoqclnJZY6HY3/AP/EACMRAAEDAwQDAQEAAAAAAAAAAAEAAgMQERIEEyExIEFhIjL/2gAIAQIBAT8BoyFxIRkAc4FCoQ0rva0x/NipheYj6t9t7JrshcUCb0ppGRjJydDJIDKBxSK+PNYpzH30hrWSPtIOEPi1EEYfkPGWL2FppXsbYom/hi4nhbUi2pFg4d+EX9BE9pvJKkPFf//EADQQAAIBAwEEBggHAQAAAAAAAAECAwAREjETISJBBBAgMlFhFCMwQlJxkaFigZKxwdHh8v/aAAgBAQAGPwLsvK/dQXr1p4mJYf17PZSxZREAgjWkh6OWx1e4t+VRONRXACxpWbU7/YbPIZ2vbyqCb5qepKC+JtXgB2pdk2MmJxPnXrEjk+xr0wcLjujwHhTTx+7ZreB59SUPw76wTuD70ExBtzNEseEch2ZovhcjqOzkdL62OtWmAlXz1+tR247jIE+Fd49Z3jInf2MYp3hfkVP70Y5lKuOsTdIHmsf8mttN+Q+OsHss3gNH/wB6xJLu8B2cJBZh3XGorZyj5NyaiUsFHvMbCtlIkW0HvWvWcjlm862sZJA7w5qf6oRzG0vJvj/2hI44uQPLtus0eY1tVhZEX6CiNnx42Vr762PSoiFbf5jzFBlYfhYaMKJ6NjGB31b3flSpcnEWuefsF2dhblWzT/qljky4Tqp0puiSRsYMjk1rW8xWzhB37yTqfZExKA5186zlG/kPYs/gKLy4Y2vuotZcwQLU5jx4BffSZGMZC9zTErayZUoOKg21GtMGwsu7d2rGkiSF5pJNEy5Ckll6M6s53xjUW503Ryu+WPLLk3lXRZGib1y/oXxP2qRPRZXSBRm6ty/moosWOYDZA8I8P2oke9r216SjMksWhHnS+ktJLjENTbXXSmjkLMNiE+hNqIlybGJY14rWFqEZmkCzooktbi3VPPxiRXurBu7jp2f/xAAmEAEAAQQBAgYDAQAAAAAAAAABEQAhMUFRYXEQIDCBsdGRocHw/9oACAEBAAE/IfK+cIVL32Er/D010z3wee9ypiizewpkBV/bROUG7BRhgdhr0Eg5EM79VYM2r9n98Pk/NMNkqLPUHvRQgkZHy5KBgMQtRxB8x8X1QFppAyfwZ/NZOJu5YfhaEcV835o3uAur9cjz+qCicE1RW4cG3ykBgjtPh3UllDqXoAexvR8xxNhtrc0qJbbIMHiyRMEb8jknuoD06KQ4F531nfjOJm63/HpulqSPTVwdOuqXg1wjscdG/FEB22+/l99IB/2qU5+LByUWFqbo460hjkJTJFnMPelyltUSYa6uV/DQQTC1jof8nvSF5384QxMgLI8jpohMuLYfv5rHsMajApOo+6eiDJ3TfbdJISTdfW5GlyYBje/sfH7rEVdiBn0HUilKsd6elRYXa+ulNi1GNex+cUdDSSEMNpx3peMKQlOvpSXlcWRupIaHs+iLBJNFRuhuyUFmeFszj5pN0AQWcMne1AydYjGrfuj0M4vLP1SyA4KZmnHtV38yg3YnzAwSNkaw5r7cjKsBigOOEEKlUWgzTRy0nk9jA02ADaZliehKKe2iMsnEzRAoMMmiSnKKO1FpdT518UiPcyES5TRYVyq6OA7FRalFbhPdyhZO/GQ1m/NZmMcAhmLT0q7wiA0EMWDilIfJ/9oADAMBAAIAAwAAABDzxBbzzzu817vPyskCdz3zw5B87zzzyuT/AM88Db9O888++fg88//EAB8RAQABBAMBAQEAAAAAAAAAAAEAEBEhMSBBUWGBsf/aAAgBAwEBPxChBlgGwiWbVW0eqHY7lwfD+QX0iO6i4m0PTfVmmajep6blzfZERzG9L3jZkTf19gAWOCBmPhMGYuY4a064f//EACIRAQACAAUEAwAAAAAAAAAAAAEAERAhMUFRIGGx8HGh0f/aAAgBAgEBPxDC9DJ3j9VSxWWYi0I1SE5w1PlJ5lHEQ9gwIoLUzDO+8R5Pmag5hlAVjkmaKUePMQlafqbidzpt54l0tu0RW69DQSJXukLLPdvMtD0dFEKDpUdB90iIt3/Mf//EACQQAQACAgICAgIDAQAAAAAAAAERIQAxQVFhcSCBEKEwkbHB/9oACAEBAAE/EPjJ918oGjytHlyXYaLQXTwIjxP8Y/YlosgRqKcm+ceWMwknE7hleJC8X2AF73HpJPvEiSiCb0r/AMMBxlCwGwvxGPxn8Ddv3UIMOhQ+8CEq9kD/AC/H9f8A3w16B9sYstNVABhkwJE0nxKYJIKCaIjKRZzhCztTg9pMDXEKCkS7Qy1Kmqw9EZJlUl9WORHnNgGOs/T/AN8gSeqCCD9v6x3TNRwc+nHe+sqaSxXATmNb1gTmuQUq90Dz8GER1jqi2mrE/SfgEkQATDsGH7yEWqht2QD7k7HHPWpbS3WZuZCKmZxkkdgDqCCPH5ZkmiQCiuov7/O8mJipeNBauyzfhV/ZLmK68Duefc/holwUcZow2BxyN9mClXswnhSi4NSKFFwZtBzFbo8B6AkuR/AwgjTXnp6/vr40kBSHpdjyqfDCQkrM2Jyd9jZ/Sqdy4ENGFUWgMG4rD09IxIYtEJC/c4HjgZyHAGgOAAMHyErbVTadOmmGJ0KlM6K6OrrnGzvlARHhjt3evnM4dCEKFYdn71gajkMdMNqftSrtyLXrBDDM0yJBGjWMC6BEbQZgmmUAikED8OTI00kK0KSxMWuQATEVDPCgoohUhM4mTpgCXlif4OVNhC+BvDFiYxUeuJa+zeiE2yAIQEQkFsF13gm/FTKJlsCCQMIgJ7BAX0vBQEB/EHM0gGg6FqdTfeLKCmcR9vC9HHvX8CP2otsGs1ZSuRuLprmvWS1+pkyiPJD2OBIxcCxQaDDBhMEDCm0zb+sJTSmkBo+KdN5SnxigWGiLEre872dYgCS6v5HuOgSI7HJVjLQHEgmojlQhyUZAgaeqEUmxDmMAXoQXggeVA8+8DfYmAp4MEHzkeT45WEsAAqW04ZZnFFSiJRTh2Y58K0rKAfVB83uZTKQ8CQOqQRxtZc90jvkgagI5yFBeZEWgRVfgrcnSnOQ1REqWxIVWShB8NzJqCzImXWcmBEAcBhCU23eIhtJ+H//Z'; // Paste base64 PNG here before deploy
+
+  // ============================================================
+  // i18n STRINGS
+  // ============================================================
+  const STRINGS = {
+    lang_toggle:        { zh: 'EN',          en: '中文' },
+    hint:               { zh: '💡 填写越详细，越有助于获取更准确的报价',
+                          en: '💡 The more detail you provide, the more accurate your quote will be.' },
+    btn_next:           { zh: '下一步 →',    en: 'Next →' },
+    btn_back:           { zh: '← 返回',      en: '← Back' },
+    btn_submit:         { zh: '提交报价',     en: 'Submit Quote' },
+    btn_retry:          { zh: '重试',         en: 'Retry' },
+    btn_continue:       { zh: '继续 →',      en: 'Continue →' },
+    required_error:     { zh: '此项为必填项', en: 'This field is required' },
+    email_error:        { zh: '请输入有效的邮箱地址', en: 'Please enter a valid email address' },
+    vin_error:          { zh: 'VIN号需为17位字母/数字（不含I、O、Q）',
+                          en: 'VIN must be 17 alphanumeric characters (excluding I, O, Q)' },
+    g2_before_g1_error: { zh: 'G2日期不能早于G1日期', en: 'G2 date cannot be before G1 date' },
+    g_before_g2_error:  { zh: 'G牌日期不能早于G2日期', en: 'G date cannot be before G2 date' },
+    cert_before_g_error:{ zh: '全科证书日期不能早于G牌日期',
+                          en: 'Full certificate date cannot be before G licence date' },
+    submit_error:       { zh: '提交失败，请稍后再试。如持续出现此问题，请直接致电或发邮件联系我们。',
+                          en: 'Submission failed. Please try again. If the issue persists, contact us directly.' },
+    success_title:      { zh: '感谢您的提交！', en: 'Thank you!' },
+    success_body:       { zh: '我们将尽快与您联系。', en: "We'll be in touch shortly." },
+    opt:                { zh: '（选填）',     en: '(optional)' },
+    select_placeholder: { zh: '请选择...',   en: 'Select...' },
+
+    // Step 0
+    step0_title:        { zh: '您需要哪种保险报价？', en: 'What would you like a quote for?' },
+    step0_sub:          { zh: '请选择一项以开始填写',  en: 'Select one to begin' },
+    auto_label:         { zh: '车险',          en: 'Auto Insurance' },
+    home_label:         { zh: '房险',          en: 'Home Insurance' },
+    both_label:         { zh: '车险 & 房险',   en: 'Auto & Home' },
+
+    // Personal Info
+    personal_title:     { zh: '个人信息',      en: 'Personal Info' },
+    full_name:          { zh: '姓名',          en: 'Full Name' },
+    dob:                { zh: '出生日期',       en: 'Date of Birth' },
+    phone:              { zh: '手机号码',       en: 'Phone Number' },
+    email:              { zh: '邮箱',           en: 'Email Address' },
+    address:            { zh: '联系地址',       en: 'Mailing Address' },
+
+    // Vehicle Info
+    vehicle_title:      { zh: '车辆信息',       en: 'Vehicle Info' },
+    auto_eff_date:      { zh: '汽车保险生效日期', en: 'Insurance Effective Date' },
+    vin:                { zh: '车辆VIN Number', en: 'Vehicle VIN' },
+    vehicle_year:       { zh: '车辆年份',        en: 'Vehicle Year' },
+    make:               { zh: '品牌',            en: 'Make' },
+    model:              { zh: '型号',            en: 'Model' },
+
+    // Driving Info
+    driving_title:      { zh: '驾驶信息',        en: 'Driving Info' },
+    licence_num:        { zh: '驾照号',           en: "Driver's Licence #" },
+    marital:            { zh: '婚姻状态',          en: 'Marital Status' },
+    marital_single:     { zh: '未婚',              en: 'Single' },
+    marital_married:    { zh: '已婚',              en: 'Married' },
+    marital_divorced:   { zh: '离异',              en: 'Divorced' },
+    g1_date:            { zh: 'G1取得日期',         en: 'G1 Licence Date' },
+    g2_date:            { zh: 'G2取得日期',         en: 'G2 Licence Date' },
+    g_date:             { zh: 'G牌取得日期',         en: 'G Licence Date' },
+    cert_date:          { zh: '全科证书日期',         en: 'Full Certificate Date' },
+    cert_hint:          { zh: '取得全科证书（G2 road test waiver）的日期，如适用',
+                          en: 'Date of full certification (G2 road test waiver), if applicable' },
+
+    // Vehicle Usage
+    usage_title:        { zh: '使用情况',            en: 'Vehicle Usage' },
+    annual_km:          { zh: '每年大概行驶公里',      en: 'Estimated Annual KM' },
+    commute_km:         { zh: '通勤距离（单程）KM',    en: 'One-way Commute (KM)' },
+    ownership:          { zh: '购车方式',              en: 'Vehicle Ownership' },
+    own_lease:          { zh: 'Lease（租赁）',         en: 'Lease' },
+    own_finance:        { zh: 'Finance（贷款购车）',    en: 'Finance' },
+    own_own:            { zh: '自购（全款）',            en: 'Own (Paid off)' },
+    snow_tires:         { zh: '配有雪胎',              en: 'Snow Tires Installed' },
+    yes:                { zh: '是',                    en: 'Yes' },
+    no:                 { zh: '否',                    en: 'No' },
+
+    // Auto Insurance History
+    auto_hist_title:    { zh: '保险历史',               en: 'Insurance History' },
+    tickets:            { zh: '近3年警察罚单',            en: 'Traffic Tickets (past 3 yrs)' },
+    accidents:          { zh: '近6年主要责任事故',         en: 'At-Fault Accidents (past 6 yrs)' },
+    hist_none:          { zh: '无',                      en: 'None' },
+    hist_once:          { zh: '1次',                     en: 'Once' },
+    hist_multi:         { zh: '多次（2+）',               en: 'Multiple (2+)' },
+    prev_auto_insurer:  { zh: '之前保险公司',              en: 'Previous Insurer' },
+    prev_insurer_hint:  { zh: '如从未购买过保险，请填写"无"',
+                          en: 'Enter "N/A" if first-time insured' },
+    auto_cov_years:     { zh: '连续车险年数',              en: 'Years of Continuous Auto Coverage' },
+
+    // Property Info
+    prop_title:         { zh: '房屋信息',                 en: 'Property Info' },
+    prop_address:       { zh: '房屋地址',                  en: 'Property Address' },
+    home_eff_date:      { zh: '房屋险生效日期',              en: 'Insurance Effective Date' },
+    prop_use:           { zh: '房屋主要用途',                en: 'Primary Use' },
+    use_owner:          { zh: '自住',                      en: 'Owner-Occupied' },
+    use_rental:         { zh: '出租',                      en: 'Rental' },
+    use_seasonal:       { zh: '度假屋',                    en: 'Seasonal/Vacation' },
+    mortgage:           { zh: '是否有贷款',                 en: 'Mortgage' },
+
+    // Property Details
+    details_title:      { zh: '房屋详情',                  en: 'Property Details' },
+    bedrooms:           { zh: '卧室数量',                   en: 'Number of Bedrooms' },
+    bathrooms:          { zh: '卫生间数量',                  en: 'Number of Bathrooms' },
+    area:               { zh: '房屋面积',                    en: 'Living Area' },
+    basement:           { zh: '地下室是否装修',               en: 'Finished Basement' },
+
+    // Home Insurance History
+    home_hist_title:    { zh: '保险历史',                   en: 'Insurance History' },
+    prev_home_insurer:  { zh: '上一家房险公司',               en: 'Previous Home Insurer' },
+    home_cov_years:     { zh: '连续房险年数',                 en: 'Years of Continuous Home Coverage' },
+    prior_claims:       { zh: '是否有过房屋险理赔',             en: 'Prior Home Insurance Claims' },
+
+    // Home Systems
+    systems_title:      { zh: '房屋系统',                    en: 'Home Systems' },
+    systems_header:     { zh: '如已更新，请填写更新年份（如未更新或不清楚，可跳过此项）',
+                          en: 'If updated, enter the year of update. Skip if unknown.' },
+    roof:               { zh: '屋顶',                       en: 'Roof' },
+    furnace:            { zh: '暖炉 / 供暖系统',              en: 'Furnace / Heating System' },
+    plumbing:           { zh: '上下水管道',                   en: 'Plumbing' },
+    electrical:         { zh: '电线',                        en: 'Electrical Wiring' },
+
+    // Transition Card
+    transition_title:   { zh: '车险信息已完成！',              en: 'Auto info complete!' },
+    transition_body:    { zh: '接下来填写房屋保险信息',          en: "Now let's collect your home insurance details." },
+
+    // Progress step labels
+    lbl_personal:       { zh: '个人信息',    en: 'Personal Info' },
+    lbl_vehicle:        { zh: '车辆信息',    en: 'Vehicle Info' },
+    lbl_driving:        { zh: '驾驶信息',    en: 'Driving Info' },
+    lbl_usage:          { zh: '使用情况',    en: 'Vehicle Usage' },
+    lbl_auto_hist:      { zh: '车险历史',    en: 'Auto History' },
+    lbl_auto_hist_car:  { zh: '保险历史',    en: 'Ins. History' },
+    lbl_prop:           { zh: '房屋信息',    en: 'Property Info' },
+    lbl_details:        { zh: '房屋详情',    en: 'Property Details' },
+    lbl_home_hist:      { zh: '房险历史',    en: 'Home History' },
+    lbl_home_hist_home: { zh: '保险历史',    en: 'Ins. History' },
+    lbl_systems:        { zh: '房屋系统',    en: 'Home Systems' },
+  };
+
+  // ============================================================
+  // i18n HELPERS
+  // ============================================================
+  let lang = 'zh';
+
+  function t(key) {
+    const entry = STRINGS[key];
+    if (!entry) { console.warn('Missing i18n key:', key); return key; }
+    return entry[lang] ?? entry.zh;
+  }
+
+  function toggleLang() {
+    lang = lang === 'zh' ? 'en' : 'zh';
+    document.getElementById('lang-toggle').textContent = t('lang_toggle');
+    document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+    renderCurrentStep();
+  }
+
+  // ============================================================
+  // STEP CONFIG
+  // ============================================================
+  const STEP_CONFIG = {
+    auto: {
+      total: 5,
+      labels: [null, 'lbl_personal','lbl_vehicle','lbl_driving','lbl_usage','lbl_auto_hist_car'],
+    },
+    home: {
+      total: 5,
+      labels: [null, 'lbl_personal','lbl_prop','lbl_details','lbl_home_hist_home','lbl_systems'],
+    },
+    both: {
+      total: 9,
+      labels: [null,
+        'lbl_personal','lbl_vehicle','lbl_driving','lbl_usage','lbl_auto_hist',
+        'lbl_prop','lbl_details','lbl_home_hist','lbl_systems'],
+    },
+  };
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  const STATE_KEY = 'kanban_cantrust_quote_v1';
+
+  let state = {
+    flow: null,
+    step: 0,
+    isTransition: false,
+    data: {},
+  };
+
+  function saveState() {
+    try {
+      sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+    } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.flow && saved.step != null) {
+          Object.assign(state, saved);
+          return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  function resetState() {
+    state = { flow: null, step: 0, isTransition: false, data: {} };
+    try { sessionStorage.removeItem(STATE_KEY); } catch(e) {}
+  }
+
+  function val(key, fallback = '') {
+    return state.data[key] != null ? state.data[key] : fallback;
+  }
+
+  function setVal(key, value) {
+    state.data[key] = value;
+    saveState();
+  }
+
+  // ============================================================
+  // NAVIGATION ENGINE
+  // ============================================================
+
+  function navigate(stepNum) {
+    state.step = stepNum;
+    state.isTransition = false;
+    saveState();
+    history.pushState({ step: stepNum, isTransition: false }, '');
+    renderCurrentStep();
+  }
+
+  function showTransition() {
+    state.isTransition = true;
+    saveState();
+    history.pushState({ step: state.step, isTransition: true }, '');
+    renderTransitionCard();
+  }
+
+  function goBack() {
+    history.back();
+  }
+
+  window.addEventListener('popstate', function(e) {
+    if (!e.state) {
+      state.step = 0;
+      state.isTransition = false;
+      renderCurrentStep();
+      return;
+    }
+    state.step = e.state.step;
+    state.isTransition = e.state.isTransition || false;
+    if (state.isTransition) renderTransitionCard();
+    else renderCurrentStep();
+  });
+
+  function renderCurrentStep() {
+    const sc = document.getElementById('step-content');
+    const nb = document.getElementById('nav-buttons');
+    const pw = document.getElementById('progress-wrap');
+    const hint = document.getElementById('hint-text');
+
+    clearErrors();
+    hideSubmitError();
+
+    if (state.step === 0) {
+      pw.style.display = 'none';
+      hint.textContent = '';
+      renderStep0();
+      nb.innerHTML = '';
+      return;
+    }
+
+    pw.style.display = 'block';
+    renderProgressBar();
+    hint.textContent = t('hint');
+
+    const renderer = getStepRenderer();
+    if (renderer) renderer();
+
+    renderNavButtons();
+  }
+
+  function getStepRenderer() {
+    const { flow, step } = state;
+    const map = {
+      auto: [null, renderPersonalInfo, renderVehicleInfo, renderDrivingInfo, renderUsage, renderAutoHistory],
+      home: [null, renderPersonalInfo, renderPropertyInfo, renderPropertyDetails, renderHomeHistory, renderHomeSystems],
+      both: [null,
+        renderPersonalInfo, renderVehicleInfo, renderDrivingInfo, renderUsage, renderAutoHistory,
+        renderPropertyInfo, renderPropertyDetails, renderHomeHistory, renderHomeSystems],
+    };
+    return map[flow]?.[step] ?? null;
+  }
+
+  function renderProgressBar() {
+    const cfg = STEP_CONFIG[state.flow];
+    const total = cfg.total;
+    const current = state.step;
+    const labelKey = cfg.labels[current];
+
+    document.getElementById('progress-text').textContent =
+      lang === 'zh' ? `步骤 ${current} / ${total}` : `Step ${current} of ${total}`;
+    document.getElementById('progress-step-label').textContent =
+      labelKey ? t(labelKey) : '';
+
+    const track = document.getElementById('progress-bar-track');
+    track.innerHTML = '';
+    for (let i = 1; i <= total; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'progress-seg' + (i < current ? ' done' : i === current ? ' active' : '');
+      track.appendChild(seg);
+    }
+  }
+
+  function renderNavButtons() {
+    const nb = document.getElementById('nav-buttons');
+    const cfg = STEP_CONFIG[state.flow];
+    const isLast = state.step === cfg.total;
+
+    let html = '';
+    if (state.step > 1) {
+      html += `<button class="btn btn-secondary" onclick="goBack()">${t('btn_back')}</button>`;
+    }
+    if (isLast) {
+      html += `<button class="btn btn-primary" onclick="handleSubmit()">${t('btn_submit')}</button>`;
+    } else {
+      html += `<button class="btn btn-primary" onclick="handleNext()">${t('btn_next')}</button>`;
+    }
+    nb.innerHTML = html;
+  }
+
+  function handleNext() {
+    collectStepData();
+    if (!validateStep()) return;
+
+    if (state.flow === 'both' && state.step === 5) {
+      showTransition();
+      return;
+    }
+    navigate(state.step + 1);
+  }
+
+  function handleSubmit() {
+    collectStepData();
+    if (!validateStep()) return;
+    submitForm();
+  }
+
+  // ============================================================
+  // STEP 0 — QUOTE TYPE SELECTION
+  // ============================================================
+
+  function renderStep0() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <p class="step0-title">${t('step0_title')}</p>
+      <p class="step0-sub">${t('step0_sub')}</p>
+      <button class="type-btn" onclick="selectFlow('auto')">
+        <span class="icon">🚗</span>
+        <span>
+          <div class="label-zh">${t('auto_label')}</div>
+          <div class="label-en">Auto Insurance</div>
+        </span>
+      </button>
+      <button class="type-btn" onclick="selectFlow('home')">
+        <span class="icon">🏠</span>
+        <span>
+          <div class="label-zh">${t('home_label')}</div>
+          <div class="label-en">Home Insurance</div>
+        </span>
+      </button>
+      <button class="type-btn" onclick="selectFlow('both')">
+        <span class="icon">🚗&amp;🏠</span>
+        <span>
+          <div class="label-zh">${t('both_label')}</div>
+          <div class="label-en">Auto &amp; Home</div>
+        </span>
+      </button>
+    `;
+  }
+
+  function selectFlow(flow) {
+    state.flow = flow;
+    navigate(1);
+  }
+
+  // ============================================================
+  // FIELD RENDERING HELPERS
+  // ============================================================
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function fieldHTML(id, labelKey, type, opts) {
+    opts = opts || {};
+    const label = t(labelKey);
+    const required = opts.required !== false;
+    const optional = !required ? `<span class="opt">${t('opt')}</span>` : '';
+    const placeholder = opts.placeholder || '';
+    const extraAttrs = opts.attrs || '';
+    const hint = opts.hint ? `<div class="field-hint">${escHtml(opts.hint)}</div>` : '';
+
+    let inputHTML = '';
+
+    if (type === 'select') {
+      const options = (opts.options || [])
+        .map(o => `<option value="${escHtml(o.value)}"${val(id) === o.value ? ' selected' : ''}>${escHtml(o.label)}</option>`)
+        .join('');
+      inputHTML = `<select id="${id}" onchange="setVal('${id}',this.value)" ${required ? 'required' : ''}>
+        <option value="">${t('select_placeholder')}</option>
+        ${options}
+      </select>`;
+    } else if (type === 'radio') {
+      const btns = (opts.options || []).map(o => `
+        <label class="${val(id) === o.value ? 'selected' : ''}">
+          <input type="radio" name="${id}" value="${escHtml(o.value)}"
+            ${val(id) === o.value ? 'checked' : ''}
+            onchange="setVal('${id}',this.value);
+                      this.closest('.radio-group').querySelectorAll('label').forEach(function(l){l.classList.remove('selected')});
+                      this.parentElement.classList.add('selected')">
+          ${escHtml(o.label)}
+        </label>`).join('');
+      inputHTML = `<div class="radio-group">${btns}</div>`;
+    } else {
+      const v = val(id);
+      inputHTML = `<input type="${type}" id="${id}" value="${escHtml(v)}"
+        placeholder="${escHtml(placeholder)}"
+        ${required ? 'required' : ''}
+        ${extraAttrs}
+        oninput="setVal('${id}',this.value)">`;
+    }
+
+    return `<div class="field" id="field-${id}">
+      <label for="${id}">${escHtml(label)}${optional}</label>
+      ${inputHTML}
+      ${hint}
+      <div class="field-error" id="err-${id}"></div>
+    </div>`;
+  }
+
+  // ============================================================
+  // STEP RENDERERS
+  // ============================================================
+
+  // --- PERSONAL INFO (shared Step 1) ---
+  function renderPersonalInfo() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('personal_title')}</h2>
+      ${fieldHTML('full_name','full_name','text',{placeholder: lang==='zh'?'张三':'John Smith'})}
+      ${fieldHTML('dob','dob','date')}
+      ${fieldHTML('phone','phone','tel',{placeholder:'604-123-4567'})}
+      ${fieldHTML('email','email','email',{placeholder:'name@example.com'})}
+      ${fieldHTML('address','address','text',{placeholder: lang==='zh'?'街道地址, 城市, 省份, 邮编':'Street, City, Province, Postal Code'})}
+    `;
+  }
+
+  // --- CAR STEP 2: VEHICLE INFO ---
+  function renderVehicleInfo() {
+    const sc = document.getElementById('step-content');
+    const currentYear = new Date().getFullYear();
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('vehicle_title')}</h2>
+      ${fieldHTML('auto_eff_date','auto_eff_date','date')}
+      <div class="field" id="field-vin">
+        <label for="vin">${escHtml(t('vin'))}</label>
+        <input type="text" id="vin"
+          value="${escHtml(val('vin'))}"
+          placeholder="e.g. 1HGCM82633A123456"
+          maxlength="17"
+          style="text-transform:uppercase"
+          oninput="this.value=this.value.toUpperCase();setVal('vin',this.value)"
+          required>
+        <div class="field-error" id="err-vin"></div>
+      </div>
+      ${fieldHTML('vehicle_year','vehicle_year','number',{attrs:`min="1900" max="${currentYear+1}" placeholder="${currentYear}"`})}
+      ${fieldHTML('make','make','text',{placeholder: lang==='zh'?'例：Toyota':'e.g. Toyota'})}
+      ${fieldHTML('model','model','text',{placeholder: lang==='zh'?'例：Camry':'e.g. Camry'})}
+    `;
+  }
+
+  // --- CAR STEP 3: DRIVING INFO ---
+  function renderDrivingInfo() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('driving_title')}</h2>
+      ${fieldHTML('licence_num','licence_num','text',{placeholder:'A12345-67890-12345'})}
+      ${fieldHTML('marital','marital','select',{options:[
+        {value:'single',   label: t('marital_single')},
+        {value:'married',  label: t('marital_married')},
+        {value:'divorced', label: t('marital_divorced')},
+      ]})}
+      ${fieldHTML('g1_date','g1_date','date')}
+      ${fieldHTML('g2_date','g2_date','date')}
+      ${fieldHTML('g_date','g_date','date')}
+      ${fieldHTML('cert_date','cert_date','date',{required:false, hint: t('cert_hint')})}
+    `;
+  }
+
+  // --- CAR STEP 4: USAGE ---
+  function renderUsage() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('usage_title')}</h2>
+      ${fieldHTML('annual_km','annual_km','number',{attrs:'min="0" placeholder="15000"'})}
+      ${fieldHTML('commute_km','commute_km','number',{attrs:'min="0" placeholder="20"'})}
+      ${fieldHTML('ownership','ownership','select',{options:[
+        {value:'lease',   label: t('own_lease')},
+        {value:'finance', label: t('own_finance')},
+        {value:'own',     label: t('own_own')},
+      ]})}
+      ${fieldHTML('snow_tires','snow_tires','radio',{options:[
+        {value:'yes', label: t('yes')},
+        {value:'no',  label: t('no')},
+      ]})}
+    `;
+  }
+
+  // --- CAR STEP 5: AUTO INSURANCE HISTORY ---
+  function renderAutoHistory() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('auto_hist_title')}</h2>
+      ${fieldHTML('tickets','tickets','select',{options:[
+        {value:'none',  label: t('hist_none')},
+        {value:'once',  label: t('hist_once')},
+        {value:'multi', label: t('hist_multi')},
+      ]})}
+      ${fieldHTML('accidents','accidents','select',{options:[
+        {value:'none',  label: t('hist_none')},
+        {value:'once',  label: t('hist_once')},
+        {value:'multi', label: t('hist_multi')},
+      ]})}
+      ${fieldHTML('prev_auto_insurer','prev_auto_insurer','text',{hint: t('prev_insurer_hint')})}
+      ${fieldHTML('auto_cov_years','auto_cov_years','number',{attrs:'min="0" placeholder="3"'})}
+    `;
+  }
+
+  // --- HOME STEP 2: PROPERTY INFO ---
+  function renderPropertyInfo() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('prop_title')}</h2>
+      ${fieldHTML('prop_address','prop_address','text',{placeholder: lang==='zh'?'街道地址, 城市, 省份, 邮编':'Street, City, Province, Postal Code'})}
+      ${fieldHTML('home_eff_date','home_eff_date','date')}
+      ${fieldHTML('prop_use','prop_use','select',{options:[
+        {value:'owner',    label: t('use_owner')},
+        {value:'rental',   label: t('use_rental')},
+        {value:'seasonal', label: t('use_seasonal')},
+      ]})}
+      ${fieldHTML('mortgage','mortgage','radio',{options:[
+        {value:'yes', label: t('yes')},
+        {value:'no',  label: t('no')},
+      ]})}
+    `;
+  }
+
+  // --- HOME STEP 3: PROPERTY DETAILS ---
+  function renderPropertyDetails() {
+    const sc = document.getElementById('step-content');
+    const unit = val('area_unit','sqft');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('details_title')}</h2>
+      ${fieldHTML('bedrooms','bedrooms','number',{attrs:'min="1" max="20" placeholder="3"'})}
+      ${fieldHTML('bathrooms','bathrooms','number',{attrs:'min="1" max="20" placeholder="2"'})}
+      <div class="field" id="field-area">
+        <label for="area">${escHtml(t('area'))}</label>
+        <div class="area-wrap">
+          <input type="number" id="area" min="1" placeholder="1500"
+            value="${escHtml(val('area'))}"
+            oninput="setVal('area',this.value)"
+            required>
+          <div class="unit-toggle">
+            <button type="button" class="unit-btn${unit==='sqft'?' active':''}"
+              onclick="setAreaUnit('sqft')">sq ft</button>
+            <button type="button" class="unit-btn${unit==='sqm'?' active':''}"
+              onclick="setAreaUnit('sqm')">m²</button>
+          </div>
+        </div>
+        <div class="field-error" id="err-area"></div>
+      </div>
+      ${fieldHTML('basement','basement','radio',{options:[
+        {value:'yes', label: t('yes')},
+        {value:'no',  label: t('no')},
+      ]})}
+    `;
+  }
+
+  function setAreaUnit(unit) {
+    setVal('area_unit', unit);
+    renderPropertyDetails();
+  }
+
+  // --- HOME STEP 4: HOME INSURANCE HISTORY ---
+  function renderHomeHistory() {
+    const sc = document.getElementById('step-content');
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('home_hist_title')}</h2>
+      ${fieldHTML('prev_home_insurer','prev_home_insurer','text',{hint: t('prev_insurer_hint')})}
+      ${fieldHTML('home_cov_years','home_cov_years','number',{attrs:'min="0" placeholder="2"'})}
+      ${fieldHTML('prior_claims','prior_claims','radio',{options:[
+        {value:'yes', label: t('yes')},
+        {value:'no',  label: t('no')},
+      ]})}
+    `;
+  }
+
+  // --- HOME STEP 5: HOME SYSTEMS ---
+  function renderHomeSystems() {
+    const sc = document.getElementById('step-content');
+    const currentYear = new Date().getFullYear();
+    sc.className = '';
+    sc.innerHTML = `
+      <h2 class="step-title">${t('systems_title')}</h2>
+      <div class="systems-note">${t('systems_header')}</div>
+      ${fieldHTML('roof','roof','number',{required:false, attrs:`min="1900" max="${currentYear}" placeholder="${lang==='zh'?'更新年份':'Year updated'}"`})}
+      ${fieldHTML('furnace','furnace','number',{required:false, attrs:`min="1900" max="${currentYear}" placeholder="${lang==='zh'?'更新年份':'Year updated'}"`})}
+      ${fieldHTML('plumbing','plumbing','number',{required:false, attrs:`min="1900" max="${currentYear}" placeholder="${lang==='zh'?'更新年份':'Year updated'}"`})}
+      ${fieldHTML('electrical','electrical','number',{required:false, attrs:`min="1900" max="${currentYear}" placeholder="${lang==='zh'?'更新年份':'Year updated'}"`})}
+    `;
+  }
+
+  // --- TRANSITION CARD (combined flow, between step 5 and 6) ---
+  function renderTransitionCard() {
+    const sc = document.getElementById('step-content');
+    const nb = document.getElementById('nav-buttons');
+    const pw = document.getElementById('progress-wrap');
+    const hint = document.getElementById('hint-text');
+
+    // Progress bar stays at step 5 of 9 while transition shows
+    pw.style.display = 'block';
+    renderProgressBar();
+    hint.textContent = '';
+
+    sc.className = '';
+    sc.innerHTML = `
+      <div class="transition-card">
+        <div class="check">✅</div>
+        <h3>${t('transition_title')}</h3>
+        <p>${t('transition_body')}</p>
+      </div>
+    `;
+
+    nb.innerHTML = `
+      <button class="btn btn-secondary" onclick="goBack()">${t('btn_back')}</button>
+      <button class="btn btn-primary" onclick="navigate(6)">${t('btn_continue')}</button>
+    `;
+  }
+
+  // ============================================================
+  // VALIDATION
+  // ============================================================
+
+  function clearErrors() {
+    document.querySelectorAll('.field-error').forEach(function(el) {
+      el.textContent = '';
+      el.classList.remove('visible');
+    });
+    document.querySelectorAll('input.error, select.error').forEach(function(el) {
+      el.classList.remove('error');
+    });
+  }
+
+  function showFieldError(id, msg) {
+    const errEl = document.getElementById('err-' + id);
+    const inputEl = document.getElementById(id);
+    if (errEl) { errEl.textContent = msg; errEl.classList.add('visible'); }
+    if (inputEl) inputEl.classList.add('error');
+  }
+
+  function vinValid(v) {
+    return /^[A-HJ-NPR-Z0-9]{17}$/.test(v.toUpperCase());
+  }
+
+  function getRequiredFields() {
+    const { flow, step } = state;
+    const maps = {
+      auto: {
+        1: ['full_name','dob','phone','email','address'],
+        2: ['auto_eff_date','vin','vehicle_year','make','model'],
+        3: ['licence_num','marital','g1_date','g2_date','g_date'],
+        4: ['annual_km','commute_km','ownership','snow_tires'],
+        5: ['tickets','accidents','prev_auto_insurer','auto_cov_years'],
+      },
+      home: {
+        1: ['full_name','dob','phone','email','address'],
+        2: ['prop_address','home_eff_date','prop_use','mortgage'],
+        3: ['bedrooms','bathrooms','area','basement'],
+        4: ['prev_home_insurer','home_cov_years','prior_claims'],
+        5: [],
+      },
+      both: {
+        1: ['full_name','dob','phone','email','address'],
+        2: ['auto_eff_date','vin','vehicle_year','make','model'],
+        3: ['licence_num','marital','g1_date','g2_date','g_date'],
+        4: ['annual_km','commute_km','ownership','snow_tires'],
+        5: ['tickets','accidents','prev_auto_insurer','auto_cov_years'],
+        6: ['prop_address','home_eff_date','prop_use','mortgage'],
+        7: ['bedrooms','bathrooms','area','basement'],
+        8: ['prev_home_insurer','home_cov_years','prior_claims'],
+        9: [],
+      },
+    };
+    return maps[flow] && maps[flow][step] ? maps[flow][step] : [];
+  }
+
+  function validateStep() {
+    clearErrors();
+    let valid = true;
+    const required = getRequiredFields();
+
+    for (let i = 0; i < required.length; i++) {
+      const id = required[i];
+      const el = document.getElementById(id);
+      const v = el ? el.value : val(id);
+      if (!v || v.toString().trim() === '') {
+        showFieldError(id, t('required_error'));
+        valid = false;
+      }
+    }
+
+    // Email format check
+    const emailVal = val('email');
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      showFieldError('email', t('email_error'));
+      valid = false;
+    }
+
+    // VIN format check
+    const vinVal = val('vin');
+    if (vinVal && !vinValid(vinVal)) {
+      showFieldError('vin', t('vin_error'));
+      valid = false;
+    }
+
+    // G date chain validation (step 3 for auto and both)
+    const { flow, step } = state;
+    if ((flow === 'auto' || flow === 'both') && step === 3) {
+      const g1 = val('g1_date'), g2 = val('g2_date'), g = val('g_date'), cert = val('cert_date');
+      if (g1 && g2 && g2 < g1) { showFieldError('g2_date', t('g2_before_g1_error')); valid = false; }
+      if (g2 && g && g < g2)   { showFieldError('g_date',  t('g_before_g2_error'));  valid = false; }
+      if (cert && g && cert < g){ showFieldError('cert_date', t('cert_before_g_error')); valid = false; }
+    }
+
+    if (!valid) {
+      const firstErr = document.querySelector('.field-error.visible');
+      if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return valid;
+  }
+
+  function collectStepData() {
+    document.querySelectorAll('#step-content input, #step-content select').forEach(function(el) {
+      if (el.type === 'radio') {
+        if (el.checked) setVal(el.name, el.value);
+      } else if (el.id) {
+        setVal(el.id, el.value);
+      }
+    });
+  }
+
+  // ============================================================
+  // SUBMISSION
+  // ============================================================
+
+  function buildPayload() {
+    const d = state.data;
+    const flowLabel = { auto: 'Auto Insurance', home: 'Home Insurance', both: 'Auto & Home' }[state.flow];
+
+    const lines = ['Quote Type: ' + flowLabel, ''];
+
+    function add(label, key, transform) {
+      let v = d[key];
+      if (v === undefined || v === null || v === '') return;
+      v = String(v);
+      if (transform) v = transform(v);
+      lines.push(label + ': ' + v);
+    }
+
+    lines.push('=== Personal Info ===');
+    add('Full Name',       'full_name');
+    add('Date of Birth',   'dob');
+    add('Phone',           'phone', function(v){ return v.replace(/[^\d+]/g, ''); });
+    add('Email',           'email');
+    add('Mailing Address', 'address');
+    lines.push('');
+
+    if (state.flow !== 'home') {
+      lines.push('=== Vehicle Info ===');
+      add('Insurance Effective Date', 'auto_eff_date');
+      add('VIN',                      'vin');
+      add('Vehicle Year',             'vehicle_year');
+      add('Make',                     'make');
+      add('Model',                    'model');
+      lines.push('');
+
+      lines.push('=== Driving Info ===');
+      add("Driver's Licence #", 'licence_num');
+      add('Marital Status',     'marital');
+      add('G1 Licence Date',    'g1_date');
+      add('G2 Licence Date',    'g2_date');
+      add('G Licence Date',     'g_date');
+      add('Full Certificate Date', 'cert_date');
+      lines.push('');
+
+      lines.push('=== Vehicle Usage ===');
+      add('Annual KM',            'annual_km');
+      add('One-way Commute (KM)', 'commute_km');
+      add('Vehicle Ownership',    'ownership');
+      add('Snow Tires',           'snow_tires');
+      lines.push('');
+
+      lines.push('=== Auto Insurance History ===');
+      add('Traffic Tickets (3yr)',             'tickets');
+      add('At-Fault Accidents (6yr)',           'accidents');
+      add('Previous Auto Insurer',             'prev_auto_insurer');
+      add('Years of Continuous Auto Coverage', 'auto_cov_years');
+      lines.push('');
+    }
+
+    if (state.flow !== 'auto') {
+      lines.push('=== Property Info ===');
+      add('Property Address',              'prop_address');
+      add('Home Insurance Effective Date', 'home_eff_date');
+      add('Primary Use',                   'prop_use');
+      add('Mortgage',                      'mortgage');
+      lines.push('');
+
+      lines.push('=== Property Details ===');
+      add('Bedrooms',  'bedrooms');
+      add('Bathrooms', 'bathrooms');
+      const area = d['area'];
+      const unit = d['area_unit'] === 'sqm' ? 'm²' : 'sq ft';
+      if (area) lines.push('Living Area: ' + Number(area).toLocaleString('en-CA') + ' ' + unit);
+      add('Finished Basement', 'basement');
+      lines.push('');
+
+      lines.push('=== Home Insurance History ===');
+      add('Previous Home Insurer',              'prev_home_insurer');
+      add('Years of Continuous Home Coverage',  'home_cov_years');
+      add('Prior Home Claims',                  'prior_claims');
+      lines.push('');
+
+      const sysCols = [['roof','Roof'],['furnace','Furnace'],['plumbing','Plumbing'],['electrical','Electrical Wiring']];
+      const sysLines = sysCols.filter(function(s){ return d[s[0]]; }).map(function(s){ return s[1] + ': ' + d[s[0]]; });
+      if (sysLines.length) {
+        lines.push('=== Home Systems (Year Updated) ===');
+        sysLines.forEach(function(l){ lines.push(l); });
+        lines.push('');
+      }
+    }
+
+    return {
+      access_key: WEB3FORMS_KEY,
+      subject: 'CanTrust Insurance Quote Request — ' + flowLabel,
+      name: d['full_name'] || 'Unknown',
+      email: d['email'] || '',
+      message: lines.join('\n'),
+    };
+  }
+
+  function buildStructuredPayload() {
+    const honeypotEl = document.getElementById('hp_website');
+    return {
+      accessKey: RELAY_ACCESS_KEY,
+      quoteType: state.flow,
+      locale: lang,
+      submittedAt: new Date().toISOString(),
+      honeypot: honeypotEl ? honeypotEl.value : '',
+      turnstileToken: (typeof turnstile !== 'undefined' && turnstileWidgetId !== null)
+        ? (turnstile.getResponse(turnstileWidgetId) || '') : '',
+      fields: Object.assign({}, state.data),
+    };
+  }
+
+  async function submitForm() {
+    const button=document.querySelector('#nav-buttons .btn-primary');
+    if(button)button.disabled=true;
+    hideSubmitError();
+    // Freeze retry payload until acknowledged. A failed response must not create a second task.
+    if(!state.pendingSubmission){state.pendingSubmission={submissionId:crypto.randomUUID(),quoteType:state.flow,locale:lang,submittedAt:new Date().toISOString(),fields:Object.assign({},state.data,state.flow!=='auto'?{area_unit:state.data.area_unit||'sqft'}:{}),honeypot:document.getElementById('hp_website')?.value||''};saveState();}
+    try {
+      const response=await fetch('/api/quote-form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state.pendingSubmission)});
+      const result=await response.json();
+      if(!response.ok||!result.ok)throw new Error(result.error||'提交失败');
+      showSuccess();
+      document.getElementById('success-title').textContent='报价任务已建立 / Quote task created';
+      document.getElementById('success-body').textContent='资料已保存到团队看板，请核对客户及报价需求。';
+      const link=document.createElement('a');link.href='/';link.textContent='返回团队看板 / Back to Kanban';document.getElementById('success-card').appendChild(link);
+    } catch(error) {const el=document.getElementById('submit-error');el.textContent=error.message+' · 重试会发送同一份资料；如需修改，请返回首页重新填写。';el.classList.add('visible');}
+    finally {if(button)button.disabled=false;}
+  }
+
+  function showSuccess() {
+    document.getElementById('wizard').style.display = 'none';
+    const card = document.getElementById('success-card');
+    card.style.display = 'block';
+    document.getElementById('success-title').textContent = t('success_title');
+    document.getElementById('success-body').textContent = t('success_body');
+    try { sessionStorage.removeItem(STATE_KEY); } catch(e) {}
+  }
+
+  function showSubmitError() {
+    const el = document.getElementById('submit-error');
+    el.textContent = t('submit_error');
+    el.classList.add('visible');
+    const nb = document.getElementById('nav-buttons');
+    nb.innerHTML = `
+      <button class="btn btn-secondary" onclick="goBack()">${t('btn_back')}</button>
+      <button class="btn btn-primary" onclick="handleSubmit()">${t('btn_retry')}</button>
+    `;
+  }
+
+  function hideSubmitError() {
+    const el = document.getElementById('submit-error');
+    if (el) { el.textContent = ''; el.classList.remove('visible'); }
+  }
+
+  // ============================================================
+  // BOOTSTRAP
+  // ============================================================
+  function init() {
+    // Set logo
+    const logoEl = document.getElementById('logo');
+    const logoText = document.getElementById('logo-text');
+    if (LOGO_B64) {
+      logoEl.src = 'data:image/png;base64,' + LOGO_B64;
+      logoEl.style.display = 'block';
+      logoText.style.display = 'none';
+    }
+
+    // Restore session or start fresh
+    const restored = loadState();
+    if (restored && state.step > 0) {
+      history.replaceState({ step: state.step, isTransition: state.isTransition }, '');
+      if (state.isTransition) renderTransitionCard();
+      else renderCurrentStep();
+    } else {
+      resetState();
+      history.replaceState({ step: 0 }, '');
+      renderCurrentStep();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() { initTurnstile(); init(); });
+  </script>
+</body>
+</html>

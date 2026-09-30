@@ -1,0 +1,179 @@
+# 同程 · 团队 Kanban
+
+一个可运行的 Next.js / React / TypeScript 团队事务应用。当前接入路线是**企业微信智能机器人单聊 → 逐条转发文字和图片 → 资料收件箱 → AI 草稿 → 人工确认 → 团队看板**。
+
+合并转发卡片及嵌套记录尚未打通。界面不会把引用摘要标记成完整资料，也没有用截图上传替代这一限制。此前的会话存档检查器保留为独立诊断工具，不是当前机器人路线的实现。
+
+## 本地运行
+
+需要 Node.js 24.14+。
+
+```powershell
+npm ci --ignore-scripts
+Copy-Item .env.example .env.local
+# 为 WORKER_TOKEN 设置随机长密钥；仅存在本地 .env.local
+npm run bootstrap -- "我的团队"
+# 用命令返回的一次性管理员邀请码，在网页“接受邀请”中创建账号
+npm run dev
+# 第二个终端：
+npm run worker
+```
+
+本次已生成 `.env.local`，请不要覆盖；已初始化正式团队，首次管理员邀请保存在 `.data/setup.json`。网页运行地址是 http://localhost:3000。点击“体验演示空间”可试用虚构资料；演示空间与正式团队隔离。
+
+没有 DATABASE_URL 时，本地使用持久化 PGlite（基于 PostgreSQL 的单进程引擎），数据存放于 `.data/postgres`，附件存放于 `.data/objects`。**只能由网页进程打开本地数据库**；bootstrap、prepare-smoke 等直接访问数据库的脚本须在网页停止时运行。独立 worker 通过带凭据的内部 API 工作，不直接打开 PGlite。
+
+正式环境设置 `DATABASE_URL` 使用 PostgreSQL 服务，设置 S3 私有桶及服务账号，关闭 `LOCAL_PREVIEW` 和 `DEMO_MODE`，配置 HTTPS 的 `APP_ORIGIN`。当通过公网隧道访问时，`WORKER_INTERNAL_ORIGIN` 仍设为 `http://127.0.0.1:3000`，避免机器人请求绕公网回环。本地启动命令仅监听 127.0.0.1；手机和团队远程访问还需要部署。
+
+## 手机流量访问
+
+固定入口为 `https://kanban.zmservice.ca/?page=board`，通过 Cloudflare 命名隧道 `team-kanban` 连接当前 Docker 网页服务。`.env.local` 的 `APP_ORIGIN` 为 `https://kanban.zmservice.ca`。新注册域名需等待注册局委派和公共 DNS 生效；旧的 `trycloudflare.com` 临时地址不再使用。
+
+启动临时入口前必须先确认这是有意的公网暴露，并确保正式环境已关闭 `DEMO_MODE`、使用 PostgreSQL 和私有对象存储。启动后把输出的 HTTPS 地址发给成员，停止隧道即可撤销入口。
+
+## Supabase 连接
+
+已创建独立 Supabase 项目 `team-kanban`，并通过迁移创建 `public.kanban_teams` 表；匿名和 authenticated 角色均无访问策略，应用使用服务端 PostgreSQL 连接。数据库密码只能由项目管理员在 Supabase 控制台设置，连接时优先使用 Connect 中的 Session pooler（IPv4）URI：
+
+```dotenv
+DATABASE_URL=postgresql://postgres.<project-ref>:[PASSWORD]@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+设置后重启网页进程并运行 `npm run build`、`npm run typecheck`；首次启动会幂等创建应用表。切换数据库前请先备份 `.data/postgres` 和 `.data/objects`，本地既有资料不会自动迁移到新项目。
+
+## 机器人接入
+
+设置 `WECOM_TEAM_ID`、`WECOM_BOT_ID`、`WECOM_BOT_SECRET`，然后运行 `npm run worker`。同一机器人只运行一个连接，旧的诊断监听器需先停止。
+
+1. 网页接受邀请、登录，打开“团队成员”并生成绑定码。
+2. 将完整绑定码发送给机器人单聊；网页自动刷新绑定状态。
+3. 在单聊中逐条转发文字或图片，不需要 @、引用、截图或保存到相册。
+4. 打开收件箱，勾选同一事项的资料，整理或追加至已有任务。
+
+未绑定身份不保存业务资料，不进入 AI。群聊被过滤。已绑定的单聊消息会进入收件箱，**并不是只采集带某个标记的消息**。不自动按时间拼接客户资料。转发接收时间不会冒充原始发言时间。
+
+工作进程先将已绑定消息落入 `.data/spool`，后台确认写库后移除待同步文件。数据库按消息标识去重；任务队列采用持久化状态和租约，异常重启后可重新领取。断线期间平台没有提供历史回放承诺，**不能保证补回机器人离线时未收到的消息**，缺失消息需重新转发。图片链接过期也需要重新转发。
+
+## DeepSeek V4.1 Flash
+
+已实现 OpenAI 兼容的服务端适配层、严格 JSON 校验、持久化整理队列和失败重试。根据 DeepSeek 2026-09-10 的官方公告，V4.1 Flash 的 API 型号为 `deepseek-flash`。本机配置使用该型号，仍会先通过 `/models` 验证再处理任何资料。AI 只接收成员选中的聊天文字；转发图片始终作为私有任务附件保存，代码没有图片识别或图片上传到 AI 的路径。
+
+在 `.env.local` 设置：
+
+```dotenv
+AI_BASE_URL=https://所选服务商的兼容API根路径
+AI_MODEL=deepseek-flash
+AI_API_KEY=仅保存在本地的密钥
+```
+
+`AI_BASE_URL` 可包含 `/v1`，代码在其后追加 `/models`、`/chat/completions`。密钥不会自动从 SCNET_API_KEY 读取，避免把其他服务的凭据发到错误的域名。
+
+```powershell
+npm run ai:verify
+npm run ai:verify -- --sample
+```
+
+第一条只核验模型列表，第二条才发送一份内置的虚构文字测试资料。图片不会发送给 DeepSeek；只选图片时可“新建并附加”任务，不能要求 AI 从图片推断任务或客户。AI 结果仅为私人草稿，负责人必须由成员选择，日期和行动项在确认时核对。聊天资料作为不可信输入，不提供工具执行权限。
+
+## ClientCore 客户确认
+
+AI 可从文字中提取客户名称或编号作为建议，但绝不自动绑定。成员在任务草稿、新建任务或任务详情中点击“在 ClientCore 中查找并确认”，从候选中明确选择后，任务才保存 `clientCoreId`、客户编号和显示名快照。名称只用于候选；图片、手机号和邮箱都不参与匹配。
+
+Team Kanban 只调用 ClientCore 的受限服务端接口，浏览器不会接触 ClientCore 登录令牌。在两个应用的本地配置中设置同一个随机密钥，并把 ClientCore 配置为对应组织：
+
+```dotenv
+# Team Kanban .env.local
+CLIENTCORE_KANBAN_API_BASE_URL=http://127.0.0.1:5174/api/integrations/team-kanban/
+CLIENTCORE_KANBAN_API_KEY=同一个随机密钥
+
+# ClientCore .env
+CLIENTCORE_TEAM_KANBAN_API_KEY=同一个随机密钥
+CLIENTCORE_TEAM_KANBAN_ORGANIZATION_ID=ClientCore 组织 ID
+```
+
+接口最多返回 10 条 `{id, clientCode, displayName, matchTypes}`，不会返回电话、邮箱、备注、附件或完整客户档案。成员选中后 Team Kanban 会以 ID 再回查一次，再保存关联；ClientCore 未配置时仍可创建未关联任务。
+
+体验演示空间不会调用 ClientCore 客户查询。请登录真实团队账号后再进行客户确认，避免演示账号接触实际客户候选。
+
+参考：[DeepSeek 官方 API 文档](https://api-docs.deepseek.com/)、[企业微信官方机器人 SDK](https://github.com/WecomTeam/aibot-node-sdk)。
+
+## 已实现
+
+- 邀请制账号和密码登录、成员管理、一次性绑定码；移除成员使已有会话立即失效。
+- 管理员密码恢复：在网页点击“忘记密码”，使用本机 `npm run recover-password -- --team <团队编号> --name <管理员显示名>`（或 `--login <管理员账号>`）生成 10 分钟、一次性恢复码；恢复成功会让该管理员的旧会话失效。恢复码只在命令行显示，不通过机器人或前端返回。
+- 私人收件箱、逐项资料选择、显式追加任务、AI 拆分任务草稿和人工确认。
+- 四列看板、负责人/类型/日期筛选、标题/客户搜索、手机状态标签。
+- 负责人、截止日期、等待原因、行动清单、评论、操作人与前后值记录。
+- 任务版本校验、10 秒可见页同步、管理员归档/恢复。
+- 私有图片、60 秒签名链接；每次读取仍验证当前成员权限，移除成员后未过期链接也失效。
+
+当前账号采用邀请加密码；普通登录只需账号和密码，首次注册时由邀请码绑定团队。密码恢复使用本机管理员一次性恢复码，未接入邮件验证码。SQL 用每个团队一条 JSONB 聚合记录，并通过行锁串行修改，适合当前 2–20 人范围；正式数据增长后应拆分任务/资料表并增加分页。
+
+## 验证与边界
+
+```powershell
+npm test
+npm run typecheck
+npm run build
+# 停止网页后准备虚构 HTTP 验收资料：
+node --env-file=.env.local scripts/prepare-smoke.ts
+# 启动网页后：
+node --env-file=.env.local scripts/http-smoke.ts
+```
+
+历史诊断：`npm run demo`、`npm run preflight -- ...`、`npm run gate`。`gate` 只检查原先的存档/合并转发验收，不会因为本轮单聊开发而自动通过。
+
+真实资料上线前尚需确认供应商、处理/存储地区、保留期限，完成 PostgreSQL/S3 备份恢复和 iOS/Android 真机全链路验收。当前为本机开发预览，不是已部署生产服务。
+
+### 保险方案沟通台
+
+入口：看板导航「保险方案对比」，或 `/insurance-review`。独立于 ClientCore，不读取或回写客户资料。
+
+支持现有车房保险与任意数量的报价方案对比、保险公司名称编辑、原始年度保费和含税费月付、保项差异筛选、电话沟通清单、草稿和确认记录保存、JSON 导出。新增方案默认空白；所选方案必须补全公司、价格和保项并勾选确认清单后才能确认。
+
+Profile 记录保存在访问浏览器的 localStorage，支持多客户独立保存、搜索与切换。切换或新建会先将未保存修改保存为草稿；旧单份记录作为第一个 Profile 保留。不会跨设备或团队同步；初始数据为虚构示例。更换公网域名后浏览器存储不互通，请先导出需要保留的记录。确认只保存沟通结果，不创建保单。
+
+月付规则：车险分期费为原始年保费的 1.3%，无税；房险分期费为原始年保费的 3%，税为原始年保费的 8%，分别按 12 期估算。费用先四舍五入至分，月付按险种分别取分后合计；尾期可有分币调整。OPCF 47R 字段参考 FSRA AF-162E (2026)，不自动推断已投保或限额。旧记录加载后新增保项均为待确认，旧确认需重新核对。
+车辆信息支持新增、编辑和移除（至少保留一辆）。逐车、逐方案输入原始年保费，汇总后按车险总保费计算 1.3% 分期费。缺少任一车辆报价时合计为待确认；原单车数据迁移到第一辆车。保障表仍为方案级记录，车辆保项差异可在保项值中注明车辆编号。
+
+## Docker 运行（本机迁移）
+
+Docker Desktop 启动后，双击 docker-start.bat 启动/更新网页和 worker。
+双击 docker-stop.bat 会先停止 worker，再停止网页。
+网页仍在 http://localhost:3000/；Docker 的 tunnel 服务通过 http://web:3000 提供固定公网入口。
+隧道配置为 config/cloudflared.yml，专用凭据只读挂载自 .data/cloudflared/credentials.json，不进入 Git 或镜像。新机器需安全恢复此凭据。隧道随 Docker 自动重启，域名保持不变；本机和 Docker 必须保持运行。
+
+配置沿用 .env.local，以只读文件挂载，密钥和业务数据不进入镜像。
+网页单独挂载实际使用的 .data/postgres-restored-20260911 至 /data/postgres，
+并挂载 .data/objects；worker 只挂载 .data/spool，通过 http://web:3000 调用网页，
+不直接打开 PGlite。Supabase 保险方案继续使用原数据库和 config 下的 CA。
+ClientCore 仍在宿主机运行，容器通过 host.docker.internal 访问；只有显式开启
+CLIENTCORE_ALLOW_DOCKER_HOST=true 时才允许此精确主机名使用 HTTP。
+固定域名使用原有账号登录。浏览器 localStorage 按域名隔离；旧域名中仍需保留的保险方案应先从原页面导出，再在新域名导入。
+
+在本目录执行：
+~~~powershell
+docker compose ps
+docker compose logs --tail 100 -f
+docker compose up -d --build --wait
+docker compose stop worker
+docker compose stop web
+~~~
+
+容器配置了 unless-stopped 重启策略。Docker Desktop 必须先运行；
+登录自动启动由 Docker Desktop 设置控制。网页健康检查验证带鉴权的数据库读取，
+不只检查端口。worker 日志中的“机器人已连接”才表示机器人鉴权成功。
+这不是合并转发或真实消息收取的端到端验收。
+
+迁移前备份位于 .data/backups/pre-docker-*，实际路径记录在
+.data/docker-backup-path.txt；包含原数据库、附件、待同步队列和配置。
+备份含敏感数据，不应上传或加入版本控制。
+不要让原生网页和容器同时打开同一个 PGlite 目录，也不要同时启动两个机器人 worker。
+需要备份时先停 worker，再停 web，随后复制上述持久化目录和 .env.local。
+
+回退：先 docker compose down，再在本目录执行 npm run start，
+另一个终端执行 npm run worker。原来的 .env.local 未改动，仍指向同一个
+宿主机数据库目录，正常回退无需恢复旧备份。原生回退时需另外配置隧道指向宿主机端口；当前隧道配置仅适用于 Docker 网页。
+当前 LOCAL_PREVIEW / DEMO_MODE 配置保持原样；容器化未改变部署模式。
+
+已有界面修改包含在镜像中；以后改动源码后需重新构建镜像。

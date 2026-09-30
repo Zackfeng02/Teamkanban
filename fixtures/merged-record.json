@@ -1,0 +1,16 @@
+{
+  "msgid": "synthetic-message-001",
+  "action": "send",
+  "from": "synthetic-forwarder",
+  "msgtime": 1788912000000,
+  "msgtype": "chatrecord",
+  "chatrecord": {
+    "title": "虚构测试记录，不是实测样本",
+    "item": [
+      { "type": "text", "content": "{\"content\":\"虚构客户 A：请变更通讯地址。\"}" },
+      { "type": "image", "content": "{\"sdkfileid\":\"synthetic-image-1\"}" },
+      { "type": "text", "content": "{\"content\":\"虚构经办人：请提供地址证明，收到后提交。\"}" },
+      { "type": "image", "content": "{\"sdkfileid\":\"synthetic-image-2\"}" }
+    ]
+  }
+}
