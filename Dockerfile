@@ -8,6 +8,11 @@ RUN npm test && npm run build && npm run typecheck
 
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim tesseract-ocr-chi-tra \
+    && rm -rf /var/lib/apt/lists/*
+ENV OCR_COMMAND=tesseract OCR_LANGUAGES=chi_sim+chi_tra+eng
 WORKDIR /app
 COPY --from=build /app /app
 EXPOSE 3000

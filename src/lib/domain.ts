@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Actor, DraftTask, Entry, Source, Task, Team } from './model.ts';
 import { checkPassword, draftSchema, hash, passwordHash, Problem, requireMember, token } from './security.ts';
 
+import { validateCreationForm } from './creation-form.ts';
 import { newWorkflow, workflowComplete } from './task-workflow.ts';
 import { applyWorkflowAction } from './workflow-actions.ts';
 
@@ -89,7 +90,8 @@ export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
   }
   if (base.op === 'createTask') {
     const { task, sourceIds } = z.object({ task: draftSchema, sourceIds: z.array(z.string()).max(30).refine(a => new Set(a).size === a.length).optional().default([]) }).parse(base); const sources = sourceIds.length ? ownSources(team, actor, sourceIds, true) : [];
-    validOwner(team, task.ownerId); const created = makeTask(task, sourceIds, actor); team.tasks.push(created); for (const source of sources) source.taskIds.push(created.id); return { taskId: created.id };
+    const creationForm = base.creationForm === undefined ? undefined : validateCreationForm(base.creationForm, task, sources);
+    validOwner(team, task.ownerId); const created = makeTask(task, sourceIds, actor); if(creationForm)created.creationForm=creationForm; team.tasks.push(created); for (const source of sources) source.taskIds.push(created.id); return { taskId: created.id };
   }
   const { taskId, version } = z.object({ taskId: z.string(), version: z.number().int().positive() }).parse(base);
   const task = team.tasks.find(t => t.id === taskId); if (!task) throw new Problem(404, '任务不存在');

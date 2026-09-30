@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canQueryClientCoreCustomers, resolveClientCoreCustomer, searchClientCoreCustomers } from '../src/lib/clientcore.ts';
+import { canQueryClientCoreCustomers, clientCoreRequest, resolveClientCoreCustomer, searchClientCoreCustomers } from '../src/lib/clientcore.ts';
 
 test('ClientCore lookup signs a server-only request and retains only approved fields', async () => {
   const originalFetch = globalThis.fetch; const original = { ...process.env };
@@ -27,6 +27,29 @@ test('ClientCore lookup signs a server-only request and retains only approved fi
 test('demo teams cannot use the ClientCore customer lookup', () => {
   assert.equal(canQueryClientCoreCustomers({ demo: true }), false);
   assert.equal(canQueryClientCoreCustomers({ demo: false }), true);
+});
+
+test('versioned ClientCoreBMS requests retain the prefix and surface actionable conflicts', async () => {
+  const originalFetch = globalThis.fetch;
+  const keys = ['CLIENTCORE_KANBAN_API_BASE_URL', 'CLIENTCORE_KANBAN_API_KEY'];
+  const original = { ...process.env };
+  const calls: string[] = [];
+  process.env.CLIENTCORE_KANBAN_API_BASE_URL = 'http://127.0.0.1:5190/api/integrations/team-kanban/v1';
+  process.env.CLIENTCORE_KANBAN_API_KEY = 'synthetic-integration-key';
+  globalThis.fetch = async url => {
+    calls.push(String(url));
+    return Response.json({ message: 'The record has changed. Reload and review.' }, { status: 409 });
+  };
+  try {
+    await assert.rejects(clientCoreRequest('clients/client-1/workflow-targets'),
+      (error: any) => error.status === 409 && error.message === 'The record has changed. Reload and review.');
+    assert.equal(calls[0], 'http://127.0.0.1:5190/api/integrations/team-kanban/v1/clients/client-1/workflow-targets');
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const key of keys) {
+      if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key];
+    }
+  }
 });
 
 test('Docker host HTTP requires explicit opt-in and rejects lookalike hosts', async () => {
