@@ -12,8 +12,9 @@ export type ClientCoreCustomer = z.infer<typeof customerSchema>;
 
 export function canQueryClientCoreCustomers(team: Pick<Team, 'demo'>) { return !team.demo; }
 
+export const DEFAULT_CLIENTCORE_API_BASE_URL='https://clientcore.zmservice.ca/api/integrations/team-kanban/v1/';
 function integrationConfig() {
-  const value = process.env.CLIENTCORE_KANBAN_API_BASE_URL?.trim(); const key = process.env.CLIENTCORE_KANBAN_API_KEY?.trim();
+  const value = process.env.CLIENTCORE_KANBAN_API_BASE_URL?.trim() || DEFAULT_CLIENTCORE_API_BASE_URL; const key = process.env.CLIENTCORE_KANBAN_API_KEY?.trim();
   if (!value || !key) throw new Problem(503, 'ClientCore 客户查询尚未配置');
   let base: URL;
   try { base = new URL(value.endsWith('/') ? value : value + '/'); } catch { throw new Problem(503, 'ClientCore 客户查询地址无效'); }

@@ -1,4 +1,5 @@
 /* Galaxy adaptations for production. Sources and MIT license: docs/galaxy-sources. */
+.task-entry-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.heading-row:has(.task-entry-actions){flex-wrap:wrap}
 [data-workspace-content]>.app,[data-workspace-content]>.ir{min-height:calc(100dvh - 70px);background:#f8faf6;padding-left:0;padding-bottom:0}
 [data-workspace-content]>.app>main,[data-workspace-content] .ir-main{max-width:1640px;margin:auto;padding:36px var(--workspace-gutter) 24px}
 [data-workspace-content] .app h1,[data-workspace-content] .ir h1{font-size:28px;line-height:1.5;letter-spacing:-.6px;font-weight:500}

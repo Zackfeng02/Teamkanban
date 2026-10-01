@@ -5,7 +5,7 @@ export const priorities = ['urgent','high','normal','low'] as const;
 export type Priority = typeof priorities[number];
 export const priorityLabels = { urgent:'紧急', high:'高', normal:'普通', low:'低' };
 export const lineLabels = { auto:'车险', home:'房屋险', combined:'车房组合', other:'其他' };
-export type WorkflowStep = { key:string; label:string; gate?:'actual'|'change'|'cancellation'|'reinstatement'|'documents'|'billing'|'cleanup'; state:'pending'|'done'|'skipped'; note:string; by?:string; at?:string; evidence?:string; branch?:'switch'|'keep'|'end'|'cancel' };
+export type WorkflowStep = { key:string; label:string; policyKey?:string; gate?:'actual'|'change'|'cancellation'|'reinstatement'|'documents'|'billing'|'cleanup'; state:'pending'|'done'|'skipped'; note:string; by?:string; at?:string; evidence?:string; branch?:'switch'|'keep'|'end'|'cancel' };
 export type Workflow = { templateVersion:number; steps:WorkflowStep[]; decision:'undecided'|'stay'|'switch'|'cancel'; decisionNote:string; decisionVersion:number|null; comparisonVersion:number; comparison:string; targetTermId:string|null; replacementTermId:string|null; originalTermId?:string; pendingConfirmation?:{ id:string; payload:unknown; termId:string; stepKey:string; gate?:string }; receipts:{id:string; at:string; stepKey:string}[] };
 type Definition = [string,string,WorkflowStep['gate']?,WorkflowStep['branch']?];
 const needs:Definition=['needs','确认需求与日期'];
@@ -34,6 +34,11 @@ const templates:Record<TaskType,Definition[]>={
  documents:[needs,['collect','获取或核对资料'],['deliver','完成交付'],['result','记录结果']],
 };
 export function newWorkflow(type:TaskType):Workflow { return {templateVersion:type==='renewal'?2:1,steps:templates[type].map(([key,label,gate,branch])=>({key,label,gate,branch,state:'pending',note:''})),decision:'undecided',decisionNote:'',decisionVersion:null,comparisonVersion:0,comparison:'',targetTermId:null,replacementTermId:null,receipts:[]}; }
+export function newCancellationWorkflow(policies:{key:string;label:string}[]):Workflow {
+ const flow=newWorkflow('cancellation');flow.templateVersion=2;
+ flow.steps=[...flow.steps.filter(s=>['needs','consent','sign'].includes(s.key)),...policies.flatMap((policy,index)=>templates.cancellation.filter(([key])=>['submit','cancellation','billing','documents'].includes(key)).map(([key,label,gate])=>({key:`${key}:${index}`,label:`${policy.label} · ${label}`,gate,policyKey:policy.key,state:'pending' as const,note:''}))),...flow.steps.filter(s=>s.key==='archive')];
+ return flow;
+}
 export function visibleSteps(flow:Workflow) { return flow.steps.filter(s=>!s.branch||(s.branch==='switch'&&flow.decision==='switch')||(s.branch==='keep'&&flow.decision!=='cancel')||(s.branch==='end'&&['switch','cancel'].includes(flow.decision))||(s.branch==='cancel'&&flow.decision==='cancel')); }
 export function nextStep(task:Pick<Task,'workflow'>) { return task.workflow ? visibleSteps(task.workflow).find(s=>s.state==='pending')?.label : undefined; }
 export function workflowComplete(flow:Workflow, type:TaskType) { return !flow.pendingConfirmation && (type!=='renewal'||(flow.decision!=='undecided'&&(flow.decision==='cancel'||flow.decisionVersion===flow.comparisonVersion))) && visibleSteps(flow).every(s=>s.gate?s.state==='done':s.state!=='pending'); }

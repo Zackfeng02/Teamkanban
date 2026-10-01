@@ -14,11 +14,11 @@ export const changeFields:Record<ChangeType,Field[]>={
  property_add:[date,...property,{key:'coverage',label:'拟申请保障',kind:'long'},reason],
  property_remove:[date,{key:'scope',label:'办理范围',kind:'select',options:{risk:'仅移除该房产',policy:'取消整张保单'},required:true},{key:'soldDate',label:'出售／交割日期',kind:'date'},reason],
  coverage_change:[date,{key:'coverage',label:'拟调整保障及限额',kind:'long',required:true},{key:'deductible',label:'拟调整免赔额'},reason],
- cancellation:[date,{key:'replacement',label:'替代保障／新保单资料',kind:'long'},reason],
+ cancellation:[{...date,label:'取消日期'},{key:'replacement',label:'替代保障／新保单资料',kind:'long'},{...reason,required:false}],
  reinstatement:[date,{key:'gap',label:'保障中断期间及恢复要求',kind:'long',required:true},reason],
  policy:[date,{key:'changes',label:'拟变更项目及新内容',kind:'long',required:true},reason]
 };
-export type ChangeBaseline={client:any;policy:any|null;assets:any[];selectedRisk:any|null;selection:{clientId:string;policyKey:string;assetId:string;riskIndex:number|null;addressIndex:number|null};oldValues:Record<string,string>};
+export type ChangeBaseline={client:any;policy:any|null;policies?:any[];assets:any[];selectedRisk:any|null;selection:{clientId:string;policyKey:string;policyKeys?:string[];assetId:string;riskIndex:number|null;addressIndex:number|null};oldValues:Record<string,string>};
 export type ChangeDraft={id:string;ownerId:string;type:ChangeType;baseline:ChangeBaseline;fingerprint:string;capturedAt:string;taskId?:string;saveHash?:string};
 export type ChangeForm={type:ChangeType;baseline:ChangeBaseline;capturedAt:string;proposed:Record<string,string>;evidence:Record<string,string>;reviewedAt:string;extraction:string};
 export function isChangeType(value:string):value is ChangeType{return (changeTypes as readonly string[]).includes(value);}

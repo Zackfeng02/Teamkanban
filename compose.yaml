@@ -41,8 +41,6 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       KANBAN_DATA_DIR: /data/postgres
-      CLIENTCORE_KANBAN_API_BASE_URL: http://host.docker.internal:5174/api/integrations/team-kanban/
-      CLIENTCORE_ALLOW_DOCKER_HOST: "true"
     volumes:
       - ./.env.local:/app/.env.local:ro
       - ./config:/app/config:ro

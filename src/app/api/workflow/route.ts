@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { authenticate, Problem, requireMember } from '../../../lib/security.ts';
 import { readTeam,mutateTeam } from '../../../lib/store.ts';
+import { assertCancellationTarget } from '../../../lib/cancellation.ts';
 import { clientCoreRequest } from '../../../lib/clientcore.ts';
 import { failure,jsonBody,originCheck } from '../../../lib/http.ts';
 export const runtime='nodejs';
@@ -13,7 +14,7 @@ async function context(taskId:string) {
  const task=team.tasks.find(t=>t.id===taskId);if(!task?.customerRef)throw new Problem(400,'请先保存并关联 ClientCore 客户');
  return {actor,team,task,clientId:task.customerRef.clientCoreId};
 }
-export async function GET(request:Request) {try {const {clientId}=await context(new URL(request.url).searchParams.get('taskId')??'');return NextResponse.json(await clientCoreRequest(`clients/${encodeURIComponent(clientId)}/workflow-targets`));}catch(e){return failure(e);}}
+export async function GET(request:Request) {try {const {clientId}=await context(new URL(request.url).searchParams.get('taskId')??'');const [targets,policies]=await Promise.all([clientCoreRequest(`clients/${encodeURIComponent(clientId)}/workflow-targets`),clientCoreRequest(`clients/${encodeURIComponent(clientId)}/policies`)]);return NextResponse.json({...targets,sourcePolicies:policies.sourcePolicies});}catch(e){return failure(e);}}
 export async function POST(request:Request) {try {
  originCheck(request);
  const input=z.object({taskId:z.string(),version:z.number().int(),stepKey:z.string(),termId:z.string(),originalTermId:z.string().optional(),mode:z.enum(['verify','record','retry']),effectiveDate:z.string().optional(),premiumCents:z.number().int().nonnegative().optional(),source:z.string().trim().max(2000).optional(),wholePolicyCancellation:z.boolean().optional()}).strict().parse(await jsonBody(request));
@@ -27,6 +28,7 @@ export async function POST(request:Request) {try {
  if(flow.pendingConfirmation&&input.mode!=='retry')throw new Problem(409,'请先重试待核实提交');
  const targets=await clientCoreRequest(`clients/${encodeURIComponent(clientId)}/workflow-targets`);
  const target=targets.items.find((t:any)=>t.id===input.termId);if(!target)throw new Problem(404,'目标保单不属于此客户');
+ if(step.policyKey){const policies=step.policyKey.startsWith('source:')?await clientCoreRequest(`clients/${encodeURIComponent(clientId)}/policies`):{sourcePolicies:[]};try{assertCancellationTarget(step.policyKey,input.termId,policies.sourcePolicies);}catch(e){throw new Problem(409,e instanceof Error?e.message:'保单年度不匹配');}}
  if(flow.pendingConfirmation&&(flow.pendingConfirmation.termId!==input.termId||flow.pendingConfirmation.stepKey!==input.stepKey))throw new Problem(409,'重试必须使用原保单和节点');
  const originalId=flow.originalTermId??input.originalTermId;
  if(task.type==='renewal'&&step.gate==='actual'){

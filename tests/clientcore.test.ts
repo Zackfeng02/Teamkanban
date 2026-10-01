@@ -2,6 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canQueryClientCoreCustomers, clientCoreRequest, resolveClientCoreCustomer, searchClientCoreCustomers } from '../src/lib/clientcore.ts';
 
+test('local and hosted deployments share the HTTPS default and require a private key', async () => {
+  const originalFetch = globalThis.fetch;
+  const keys = ['CLIENTCORE_KANBAN_API_BASE_URL', 'CLIENTCORE_KANBAN_API_KEY'];
+  const original = { ...process.env };
+  const calls: string[] = [];
+  globalThis.fetch = async url => { calls.push(String(url)); return Response.json({ items: [] }); };
+  try {
+    delete process.env.CLIENTCORE_KANBAN_API_BASE_URL;
+    delete process.env.CLIENTCORE_KANBAN_API_KEY;
+    await assert.rejects(searchClientCoreCustomers('Synthetic'), /尚未配置/);
+    assert.equal(calls.length, 0);
+    process.env.CLIENTCORE_KANBAN_API_KEY = 'synthetic-integration-key';
+    for (const value of [undefined, '', '   ']) {
+      if (value === undefined) delete process.env.CLIENTCORE_KANBAN_API_BASE_URL;
+      else process.env.CLIENTCORE_KANBAN_API_BASE_URL = value;
+      assert.deepEqual(await searchClientCoreCustomers('Synthetic'), []);
+    }
+    assert.equal(calls.length, 3);
+    assert.ok(calls.every(url => url === 'https://clientcore.zmservice.ca/api/integrations/team-kanban/v1/client-candidates?q=Synthetic'));
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; }
+  }
+});
+
 test('ClientCore lookup signs a server-only request and retains only approved fields', async () => {
   const originalFetch = globalThis.fetch; const original = { ...process.env };
   Object.assign(process.env, { CLIENTCORE_KANBAN_API_BASE_URL: 'http://127.0.0.1:5174/integrations/team-kanban', CLIENTCORE_KANBAN_API_KEY: 'synthetic-integration-key' });
