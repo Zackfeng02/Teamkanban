@@ -1,3 +1,4 @@
+import {reviewedRenewalContext} from './renewal-portfolio.ts';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {readTeam,mutateTeam} from './store.ts';
@@ -57,7 +58,7 @@ function applyVerified(task:Task,actor:Actor,evidence:Record<string,string>) {
 
 export async function startRenewal(actor:Actor,input:any) {
  const v=z.object({kind:z.enum(['source','term']),targetId:z.string(),clientId:z.string(),taskId:z.string().optional()}).parse(input);
- const context=await clientCoreRequest(contextPath(v.clientId,v.kind,v.targetId));
+ const context=await reviewedRenewalContext(v.clientId,v.kind,v.targetId);
  return mutateTeam(actor.teamId,team=>{
   requireMember(team,actor,true);if(team.demo)throw new Problem(403,'演示空间不能创建业务任务');
   const canonical=context.term?.id??v.targetId;

@@ -1,3 +1,4 @@
+import {renewalPortfolio,renewalQueue} from './renewal-portfolio.ts';
 import {readTeam,mutateTeam} from './store.ts';
 import {clientCoreRequest,clientCorePdf} from './clientcore.ts';
 import {Problem,requireMember} from './security.ts';
@@ -14,14 +15,13 @@ export async function csrTask(actor:Actor,taskId:string) {
 export async function csrQueue(actor:Actor) {
  const team=await readTeam(actor.teamId);if(!team)throw new Problem(404,'Team not found.');requireMember(team,actor);
  if(team.demo)throw new Problem(403,'Demo spaces cannot access customer comparisons.');
- const queue=await clientCoreRequest('renewal-queue');
+ const queue=await renewalQueue();
  return {...queue,items:queue.items.map((p:any)=>({...p,taskId:team.tasks.find(t=>!t.archived&&t.type==='renewal'&&t.customerRef?.clientCoreId===p.clientId&&
   (t.renewal?.targetId===p.targetId&&t.renewal?.kind===p.targetKind||t.workflow?.originalTermId===p.targetId))?.id??null}))};
 }
 export async function csrComparison(actor:Actor,taskId:string) {
  const {team,task,clientId}=await csrTask(actor,taskId);
- const target=task.renewal?`?targetKind=${task.renewal.kind}&targetId=${encodeURIComponent(task.renewal.targetId)}`:'';
- const portfolio=await clientCoreRequest(`clients/${encodeURIComponent(clientId)}/renewal-comparison${target}`);
+ const portfolio=await renewalPortfolio(clientId,task.renewal?{kind:task.renewal.kind,targetId:task.renewal.targetId}:task.workflow?.originalTermId?{kind:'term',targetId:task.workflow.originalTermId}:undefined);
  const feedback=team.tasks.filter(t=>t.type==='renewal'&&t.customerRef?.clientCoreId===clientId).flatMap(t=>(t as CsrTask).renewalFeedback??[]).sort((a,b)=>b.at.localeCompare(a.at));
  const policyTasks=Object.fromEntries(portfolio.policies.map((p:any)=>{const related=team.tasks.filter(t=>t.type==='renewal'&&t.customerRef?.clientCoreId===clientId&&(t.renewal?.kind===p.targetKind&&t.renewal?.targetId===p.targetId||t.renewal?.kind==='source'&&t.renewal?.targetId===p.sourceTargetId||t.workflow?.originalTermId===p.targetId));const linked=related.find(t=>!t.archived)??related[0]??task;return [p.targetKind+':'+p.targetId,{id:linked.id,version:linked.version,archived:linked.archived}];}));
  return {task,portfolio,feedback,policyTasks};

@@ -9,7 +9,7 @@ export const dynamic='force-dynamic';
 export async function GET(request:Request) {
  try {
   const actor=await authenticate((await cookies()).get('kanban_session')?.value),url=new URL(request.url),taskId=url.searchParams.get('taskId');
-  if(!taskId){const {readTeam}=await import('../../../lib/store.ts');const team=await readTeam(actor.teamId);if(team?.demo)throw new Problem(403,'演示空间不能读取续保清单');return NextResponse.json(await clientCoreRequest('renewal-queue'),{headers:{'Cache-Control':'no-store'}});}
+  if(!taskId){const {readTeam}=await import('../../../lib/store.ts');const team=await readTeam(actor.teamId);if(team?.demo)throw new Problem(403,'演示空间不能读取续保清单');return NextResponse.json(await clientCoreRequest('renewal-reviews'),{headers:{'Cache-Control':'no-store'}});}
   const {task,clientId}=await renewalTask(actor,taskId);
   const fileId=url.searchParams.get('fileId'),jobId=url.searchParams.get('jobId');
   if(fileId||jobId) {
