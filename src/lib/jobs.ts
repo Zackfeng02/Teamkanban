@@ -3,6 +3,7 @@ import { mutateTeam, readTeam } from './store.ts';
 import { downloadMedia, putMedia } from './media.ts';
 import { organize } from './ai.ts';
 import type { Job, Team } from './model.ts';
+import {archiveCompletedTasks} from './task-board.ts';
 export function claimJob(team: Team, time = Date.now()): Job | null {
   const job = team.jobs.find(j => j.state === 'queued' || j.state === 'running' && (j.leaseUntil ?? 0) < time);
   if (!job) return null;
@@ -11,7 +12,7 @@ export function claimJob(team: Team, time = Date.now()): Job | null {
   return structuredClone(job);
 }
 export async function runNextJob(teamId: string) {
-  const job = await mutateTeam(teamId, team => { team.workerSeenAt = new Date().toISOString(); return claimJob(team); });
+  const job = await mutateTeam(teamId, team => { team.workerSeenAt = new Date().toISOString(); archiveCompletedTasks(team); return claimJob(team); });
   if (!job) return false;
   let result: any; let error: string | undefined;
   try {

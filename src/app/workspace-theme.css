@@ -55,3 +55,7 @@
 @media(prefers-reduced-motion:reduce){[data-workspace-content] .app *,[data-workspace-content] .ir *{transition:none!important;animation:none!important}}
 @media print{[data-workspace-content]>.app,[data-workspace-content]>.ir{min-height:0;padding:0}[data-workspace-content]>.app>main,[data-workspace-content] .ir-main{padding:0}[data-workspace-content] .app .task-card-actions{display:none}}
 @media(max-width:720px){[data-workspace-content] .app .filters select{flex:1 1 25%;min-width:80px;max-width:none}[data-workspace-content] .app .search{flex:1 1 60%}}
+
+[data-workspace-content] .app .task-card{cursor:grab}[data-workspace-content] .app .task-card-open{cursor:grab}[data-workspace-content] .app .task-card.dragging{opacity:.45;cursor:grabbing}[data-workspace-content] .app .task-card.drop-before{border-top:3px solid #2d6652}[data-workspace-content] .app .task-card.drop-after{border-bottom:3px solid #2d6652}[data-workspace-content] .app .task-sort-handle{position:absolute;right:8px;bottom:9px;padding:4px;color:#788b7b;cursor:grab;border-radius:4px}[data-workspace-content] .app .task-card .assignee{margin-right:15px}[data-workspace-content] .app .board-tools .filters{margin-left:0}
+
+[data-workspace-content] .app .task-card.dragging{user-select:none}[data-workspace-content] .app .task-card-open{user-select:none}

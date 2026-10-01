@@ -3,13 +3,14 @@ import { NextResponse } from 'next/server';
 import { authenticate } from '../../../lib/security.ts';
 import { mutateTeam, readTeam } from '../../../lib/store.ts';
 import { applyAction, snapshot } from '../../../lib/domain.ts';
+import {archiveCompletedTasks} from '../../../lib/task-board.ts';
 import { failure, jsonBody, originCheck } from '../../../lib/http.ts';
 import { aiStatus } from '../../../lib/ai.ts';
 import { canQueryClientCoreCustomers, resolveClientCoreCustomer } from '../../../lib/clientcore.ts';
 import { Problem } from '../../../lib/security.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export async function GET() { try { const actor = await authenticate((await cookies()).get('kanban_session')?.value); return NextResponse.json({ ...snapshot((await readTeam(actor.teamId))!, actor), ai: aiStatus() }, { headers: { 'Cache-Control': 'no-store' } }); } catch (error) { return failure(error); } }
+export async function GET() { try { const actor = await authenticate((await cookies()).get('kanban_session')?.value); return NextResponse.json({ ...await mutateTeam(actor.teamId,team=>{archiveCompletedTasks(team);return snapshot(team,actor);}), ai: aiStatus() }, { headers: { 'Cache-Control': 'no-store' } }); } catch (error) { return failure(error); } }
 async function resolveCustomerReference(task: any) {
   if (!task || typeof task !== 'object' || task.customerRef === undefined || task.customerRef === null) return task;
   if (typeof task.customerRef !== 'object' || typeof task.customerRef.clientCoreId !== 'string') throw new Problem(400, '客户关联格式不正确');

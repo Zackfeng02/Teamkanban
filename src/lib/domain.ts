@@ -6,6 +6,7 @@ import { checkPassword, draftSchema, hash, passwordHash, Problem, requireMember,
 import { validateCreationForm } from './creation-form.ts';
 import { newWorkflow, workflowComplete } from './task-workflow.ts';
 import { applyWorkflowAction } from './workflow-actions.ts';
+import {reorderedColumn} from './task-board.ts';
 
 const now = () => new Date().toISOString();
 const idsSchema = z.array(z.string()).min(1).max(30).refine(a => new Set(a).size === a.length);
@@ -35,11 +36,11 @@ export function resetPassword(team: Team, login: string, code: string, newPasswo
   return { memberId: member.id, login: member.login };
 }
 export function makeTask(data: DraftTask, sourceIds: string[], actor: Actor): Task {
-  return { ...data, workflow:newWorkflow(data.type), priority:data.priority??'normal', insuranceLine:data.insuranceLine??'other', checklist: data.checklist.map(text => ({ id: randomUUID(), text, done: false })), id: randomUUID(), status: 'todo', waitingReason: '', sourceIds, version: 1, archived: false, createdAt: now(), updatedAt: now(), comments: [], activity: [{ id: randomUUID(), memberId: actor.memberId, at: now(), action: '创建任务', before: null, after: { title: data.title, customerRef: data.customerRef, ownerId: data.ownerId, dueDate: data.dueDate } }] };
+  return { ...data, workflow:newWorkflow(data.type), priority:data.priority??'normal', insuranceLine:data.insuranceLine??'other', checklist: data.checklist.map(text => ({ id: randomUUID(), text, done: false })), id: randomUUID(), status: 'todo', completedAt:null, waitingReason: '', sourceIds, version: 1, archived: false, createdAt: now(), updatedAt: now(), comments: [], activity: [{ id: randomUUID(), memberId: actor.memberId, at: now(), action: '创建任务', before: null, after: { title: data.title, customerRef: data.customerRef, ownerId: data.ownerId, dueDate: data.dueDate } }] };
 }
 export function snapshot(team: Team, actor: Actor) {
   const me = requireMember(team, actor);
-  return { team: { id: team.id, name: team.name, demo: team.demo }, me: { id: me.id, name: me.name, role: me.role, bound: team.bindings.some(b => b.memberId === me.id) }, members: team.members.map(({ id, name, role, active }) => ({ id, name, role, active })), sources: team.sources.filter(s => visibleSource(team, actor, s)), media: team.media.filter(m => { const source = team.sources.find(s => s.id === m.sourceId); return source && visibleSource(team, actor, source); }).map(({ id, sourceId, key, mime, bytes, error }) => ({ id, sourceId, available: !!key, mime, bytes, error })), drafts: team.drafts.filter(d => d.ownerId === me.id && d.state !== 'confirmed'), tasks: team.tasks, workerSeenAt: team.workerSeenAt ?? null };
+  return { team: { id: team.id, name: team.name, demo: team.demo }, me: { id: me.id, name: me.name, role: me.role, bound: team.bindings.some(b => b.memberId === me.id) }, members: team.members.map(({ id, name, role, active }) => ({ id, name, role, active })), sources: team.sources.filter(s => visibleSource(team, actor, s)), media: team.media.filter(m => { const source = team.sources.find(s => s.id === m.sourceId); return source && visibleSource(team, actor, source); }).map(({ id, sourceId, key, mime, bytes, error }) => ({ id, sourceId, available: !!key, mime, bytes, error })), drafts: team.drafts.filter(d => d.ownerId === me.id && d.state !== 'confirmed'), tasks: team.tasks, taskOrder:team.taskOrder??{}, taskOrderVersion:team.taskOrderVersion??0, workerSeenAt: team.workerSeenAt ?? null };
 }
 export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
   requireMember(team, actor);
@@ -96,6 +97,15 @@ export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
   const { taskId, version } = z.object({ taskId: z.string(), version: z.number().int().positive() }).parse(base);
   const task = team.tasks.find(t => t.id === taskId); if (!task) throw new Problem(404, '任务不存在');
   if (task.version !== version) throw new Problem(409, '其他成员已更新此任务。请查看最新内容后再保存');
+  if (base.op === 'reorderTask') {
+    const {beforeTaskId,orderVersion}=z.object({beforeTaskId:z.string().nullable(),orderVersion:z.number().int().nonnegative()}).parse(base);
+    if(orderVersion!==(team.taskOrderVersion??0))throw new Problem(409,'任务顺序已更新，请重新加载后排序');
+    if(beforeTaskId===task.id)return {};
+    const target=beforeTaskId===null?null:team.tasks.find(t=>t.id===beforeTaskId);
+    if(beforeTaskId!==null&&(!target||target.status!==task.status||target.archived!==task.archived))throw new Problem(400,'只能在同一状态列内排序');
+    team.taskOrder??={};team.taskOrder[task.status]=reorderedColumn(team,task.status,task.id,beforeTaskId);team.taskOrderVersion=(team.taskOrderVersion??0)+1;
+    event(task,actor,'调整任务顺序',null,{beforeTaskId});return {};
+  }
   if (base.op.startsWith('workflow.')) { const before=structuredClone(task.workflow??null); applyWorkflowAction(task,actor,base); event(task,actor,'更新办理节点',before,task.workflow); return {}; }
   if (base.op === 'updateTask') {
     if(task.workflow?.pendingConfirmation||task.renewal?.pending) throw new Problem(409,'请先核实待处理的业务提交，再修改任务');
@@ -109,10 +119,10 @@ export function applyAction(team: Team, actor: Actor, input: unknown): unknown {
     if (task.workflow && (task.workflow.pendingConfirmation || task.workflow.receipts.length || task.workflow.steps.some(s=>s.evidence)) && (patch.type!==task.type || patch.customerRef?.clientCoreId!==task.customerRef?.clientCoreId)) throw new Problem(409,'已有业务确认，不能更换任务类型或客户');
     if (patch.type!==task.type) { const flow=newWorkflow(patch.type); if(task.workflow) flow.steps=flow.steps.map(s=>task.workflow!.steps.find(old=>old.key===s.key&&old.label===s.label)??s); task.workflow=flow; }
     if (patch.status==='done' && task.workflow && !workflowComplete(task.workflow,patch.type)) throw new Problem(400,'请先完成必需办理节点');
-    const before = Object.fromEntries(Object.keys(patch).map(key => [key, (task as any)[key]])); Object.assign(task, patch); event(task, actor, '更新任务', before, patch); return {};
+    const before = Object.fromEntries(Object.keys(patch).map(key => [key, (task as any)[key]])); if(patch.status!==task.status)task.completedAt=patch.status==='done'?now():null; Object.assign(task, patch); event(task, actor, '更新任务', before, patch); return {};
   }
   if (base.op === 'comment') { const { text } = z.object({ text: z.string().trim().min(1).max(4000) }).parse(base); task.comments.push({ id: randomUUID(), memberId: actor.memberId, at: now(), text }); event(task, actor, '添加进展', null, text); return {}; }
-  if (base.op === 'archive') { requireMember(team, actor, true); const { archived } = z.object({ archived: z.boolean() }).parse(base); if(archived&&(task.renewal||task.billingFollowup||task.type==='cancellation')&&(task.status!=='done'||task.renewal?.pending||task.workflow&&!workflowComplete(task.workflow,task.type)))throw new Problem(400,'请先核实并完成必需业务节点，再归档任务'); const before = task.archived; task.archived = archived; event(task, actor, archived ? '归档任务' : '恢复任务', before, archived); return {}; }
+  if (base.op === 'archive') { requireMember(team, actor, true); const { archived } = z.object({ archived: z.boolean() }).parse(base); if(archived&&(task.renewal||task.billingFollowup||task.type==='cancellation')&&(task.status!=='done'||task.renewal?.pending||task.workflow&&!workflowComplete(task.workflow,task.type)))throw new Problem(400,'请先核实并完成必需业务节点，再归档任务'); const before = task.archived; if(!archived&&task.archived&&task.status==='done')task.completedAt=now(); task.archived = archived; event(task, actor, archived ? '归档任务' : '恢复任务', before, archived); return {}; }
   if (base.op === 'append') { const { sourceIds } = z.object({ sourceIds: idsSchema }).parse(base); const sources = ownSources(team, actor, sourceIds, true); const before = [...task.sourceIds]; task.sourceIds = [...new Set([...task.sourceIds, ...sourceIds])]; for (const source of sources) if (!source.taskIds.includes(task.id)) source.taskIds.push(task.id); event(task, actor, '追加资料', before, task.sourceIds); return {}; }
   throw new Problem(400, '未知操作');
 }

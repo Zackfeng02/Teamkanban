@@ -4,6 +4,7 @@ import {clientCoreRequest} from './clientcore.ts';
 import {changeFields,changeTypes,type ChangeBaseline,type ChangeDraft,type ChangeType} from './change-form.ts';
 import {cancellationPolicies,policyDates,policyLine,policyNumber} from './cancellation.ts';
 import {newCancellationWorkflow} from './task-workflow.ts';
+import {withinCurrentTerm,isCurrentPolicy} from './current-policies.ts';
 import {Problem,requireMember,dateSchema} from './security.ts';
 import {makeTask} from './domain.ts';
 import {taskTypeLabels} from './task-templates.ts';
@@ -13,7 +14,8 @@ export function digest(v:unknown){return createHash('sha256').update(JSON.string
 export const selectionSchema=z.object({clientId:z.string().min(1).max(160),policyKey:z.string().max(200),policyKeys:z.array(z.string().min(1).max(200)).min(1).max(8).refine(keys=>new Set(keys).size===keys.length,'保单选择重复').optional(),assetId:z.string().max(160).default(''),riskIndex:z.number().int().nonnegative().nullable().default(null),addressIndex:z.number().int().nonnegative().nullable().default(null)}).strict();
 export async function changeContext(clientId:string){
  const [client,targets,policies,assets]=await Promise.all([clientCoreRequest(`clients/${encodeURIComponent(clientId)}`),clientCoreRequest(`clients/${encodeURIComponent(clientId)}/workflow-targets`),clientCoreRequest(`clients/${encodeURIComponent(clientId)}/policies`),clientCoreRequest(`clients/${encodeURIComponent(clientId)}/assets`)]);
- return {client,policies:[...targets.items.map((p:any)=>({...p,key:'term:'+p.id,label:`${p.policy_number||'Binder'} · ${p.insurer} · ${p.effective_date} — ${p.expiry_date}`})),...policies.sourcePolicies.filter((p:any)=>!p.workflowTermId&&!/VOID/i.test(p.policyNumber??'')).map((p:any)=>({...p,key:'source:'+p.sourceId,label:`${p.policyNumber||'Source'} · ${p.insurer||''} · ${p.effectiveDate||''} — ${p.expiryDate||''}（导入记录）`}))],assets:assets.items};
+ const currentTargets=await Promise.all(targets.items.filter((p:any)=>withinCurrentTerm(p)).map(async(p:any)=>({...p,status:(await clientCoreRequest('policy-terms/'+encodeURIComponent(p.id))).status})));
+ return {client,policies:[...currentTargets.filter((p:any)=>isCurrentPolicy(p)).map((p:any)=>({...p,key:'term:'+p.id,label:`${p.policy_number||'Binder'} · ${p.insurer} · ${p.effective_date} — ${p.expiry_date}`})),...policies.sourcePolicies.filter((p:any)=>!p.workflowTermId&&isCurrentPolicy(p)&&!/VOID/i.test(p.policyNumber??'')).map((p:any)=>({...p,key:'source:'+p.sourceId,label:`${p.policyNumber||'Source'} · ${p.insurer||''} · ${p.effectiveDate||''} — ${p.expiryDate||''}（导入记录）`}))],assets:assets.items};
 }
 export async function loadBaseline(selection:z.infer<typeof selectionSchema>):Promise<ChangeBaseline>{
  if(selection.policyKeys){
@@ -22,7 +24,7 @@ export async function loadBaseline(selection:z.infer<typeof selectionSchema>):Pr
   return {...baselines[0],selection,policies:baselines.map(b=>b.policy)};
  }
  const context=await changeContext(selection.clientId);let policy:any=null;
- if(selection.policyKey){const choice=context.policies.find((p:any)=>p.key===selection.policyKey);if(!choice)throw new Problem(404,'所选保单不属于已确认客户');policy=choice.key.startsWith('term:')?{...await clientCoreRequest('policy-terms/'+encodeURIComponent(choice.id)),key:choice.key}:choice;}
+ if(selection.policyKey){const choice=context.policies.find((p:any)=>p.key===selection.policyKey);if(!choice)throw new Problem(404,'所选保单不是该客户目前生效的保单，请重新选择');policy=choice.key.startsWith('term:')?{...await clientCoreRequest('policy-terms/'+encodeURIComponent(choice.id)),key:choice.key}:choice;}
  if(policy?.key?.startsWith('term:'))policy={id:policy.id,key:policy.key,policy_id:policy.policy_id,policy_number:policy.policy_number,insurer:policy.insurer,line:policy.line,revision:policy.revision,policyRevision:policy.policyRevision,effectiveDate:policy.effectiveDate,expiryDate:policy.expiryDate,status:policy.status,currentSubjects:policy.currentSubjects,currentApplicants:policy.currentApplicants,currentPremium:policy.currentPremium};
  const asset=selection.assetId?context.assets.find((a:any)=>a.id===selection.assetId):null;
  if(selection.assetId&&!asset)throw new Problem(404,'所选资产不属于已确认客户');

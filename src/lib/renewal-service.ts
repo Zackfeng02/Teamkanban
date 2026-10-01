@@ -193,7 +193,7 @@ export async function renewalOperation(actor:Actor,input:any) {
  if(v.op==='finish') {
   if(r.cleanupPending)throw new Problem(409,'报价删除仍待重试');
   const evidence=await verifiedGates(task,team,clientId,context,target,jobs??[]);
-  return mutateTeam(actor.teamId,current=>{const t=current.tasks.find(t=>t.id===task.id)!;assertVersion(t,v.version);applyVerified(t,actor,evidence);step(t,'archive',actor,'reviewed','档案和后续事项已核对');if(!workflowComplete(t.workflow!,'renewal'))throw new Problem(400,'请先完成所有必需节点');t.status='done';t.archived=true;touch(t,actor,'完成并归档续保任务',{});return {ok:true};});
+  return mutateTeam(actor.teamId,current=>{const t=current.tasks.find(t=>t.id===task.id)!;assertVersion(t,v.version);applyVerified(t,actor,evidence);step(t,'archive',actor,'reviewed','档案和后续事项已核对');if(!workflowComplete(t.workflow!,'renewal'))throw new Problem(400,'请先完成所有必需节点');if(t.status!=='done')t.completedAt=new Date().toISOString();t.status='done';touch(t,actor,'完成续保任务',{});return {ok:true};});
  }
  throw new Problem(400,'未知续保操作');
 }
@@ -214,6 +214,6 @@ async function completeBilling(actor:Actor,task:Task,data:any,retry:boolean) {
  let result:any;
  try{result=await clientCoreRequest('confirmations',pending.payload);}catch(error){if(error instanceof Problem&&error.status>=400&&error.status<500)await mutateTeam(actor.teamId,team=>{const t=team.tasks.find(t=>t.id===task.id)!;if(t.workflow?.pendingConfirmation?.id===pending!.id){delete t.workflow.pendingConfirmation;touch(t,actor,'账务提交被拒绝',{});}});throw error;}
  if(typeof result?.receipt?.id!=='string'||!Array.isArray(result.receipt.results)||result.receipt.results.length!==1)throw new Problem(503,'账务回执不完整，请重试原提交');
- await mutateTeam(actor.teamId,team=>{const t=team.tasks.find(t=>t.id===task.id)!;if(t.workflow?.pendingConfirmation?.id!==pending!.id)throw new Problem(409,'提交状态已更新');for(const node of t.workflow.steps)step(t,node.key,actor,result.receipt.id,'保险公司实际账务结果已存入 BMS');t.workflow.receipts.push({id:result.receipt.id,stepKey:'result',at:new Date().toISOString()});delete t.workflow.pendingConfirmation;t.checklist.forEach(c=>c.done=true);t.status='done';t.archived=true;touch(t,actor,'完成取消账务跟进',{receiptId:result.receipt.id});});
+ await mutateTeam(actor.teamId,team=>{const t=team.tasks.find(t=>t.id===task.id)!;if(t.workflow?.pendingConfirmation?.id!==pending!.id)throw new Problem(409,'提交状态已更新');for(const node of t.workflow.steps)step(t,node.key,actor,result.receipt.id,'保险公司实际账务结果已存入 BMS');t.workflow.receipts.push({id:result.receipt.id,stepKey:'result',at:new Date().toISOString()});delete t.workflow.pendingConfirmation;t.checklist.forEach(c=>c.done=true);if(t.status!=='done')t.completedAt=new Date().toISOString();t.status='done';touch(t,actor,'完成取消账务跟进',{receiptId:result.receipt.id});});
  return {ok:true};
 }
